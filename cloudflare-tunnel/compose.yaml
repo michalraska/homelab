@@ -1,0 +1,26 @@
+services:
+  # ==================== Cloudflare Tunnel ====================
+  # Provides external access to internal services via Cloudflare
+  # Connects to Traefik on the ingress network
+  cloudflare-tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflare-tunnel
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    environment:
+      - TZ=${TZ}
+    volumes:
+      - ./data:/root/.cloudflare-tunnel
+    networks:
+      - ingress
+    depends_on:
+      traefik:
+        condition: service_started
+
+volumes:
+  cloudflare-tunnel-data:
+    driver: local

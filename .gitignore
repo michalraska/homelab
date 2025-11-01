@@ -1,0 +1,89 @@
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Docker
+.docker/
+.docker-compose.override.yml
+
+# Logs
+logs/
+*.log
+
+# Credentials and secrets
+*.key
+*.pem
+credentials.json
+secrets.json
+tunnel-credentials.json
+
+# OS
+Thumbs.db
+.AppleDouble
+.LSOverride
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Temporary files
+temp/
+tmp/
+*.tmp
+
+# Data directories (don't sync actual data)
+data/
+/mnt/data/media/
+/mnt/data/immich/
+/mnt/data/appdata/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+*.sql
+
+# Cache
+cache/
+.cache/
+
+# Node modules (if used)
+node_modules/
+package-lock.json
+yarn.lock
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+
+# Services
+adguard/conf
+immich/library
+immich/db
+
+arr/data
+arr/bazarr
+arr/gluetun
+arr/homarr
+arr/jellyfin
+arr/prowlarr
+arr/qbittorrent
+arr/radarr
+arr/sonarr
+
+
+
+

@@ -1,0 +1,18 @@
+services:
+  # ==================== System Monitor ====================
+  dashdot:
+    image: mauricenino/dashdot:latest
+    container_name: dashdot
+    restart: unless-stopped
+    privileged: true
+    environment:
+      - TZ=${TZ}
+    volumes:
+      - /:/mnt/host:ro
+    networks:
+      - services
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dashdot.rule=Host(`dashdot.${DOMAIN}`)"
+      - "traefik.http.routers.dashdot.entrypoints=web"
+      - "traefik.http.services.dashdot.loadbalancer.server.port=3001"
