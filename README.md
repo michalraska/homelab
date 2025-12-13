@@ -288,14 +288,11 @@ This configuration routes all DNS queries to AdGuard Home on localhost and disab
 
 **Initial Setup:**
 1. Access directly via: `http://<homelab-ip>:3000`
-2. Complete initial setup wizard
+2. Complete initial setup wizard:
+   - Set **Admin Web Interface** to listen on port `3000` (prevents collision with Traefik on port 80)
+   - Set **DNS server** to listen on port `53`
 3. Create admin account with strong password
-4. **Configure web interface port** (if not already set to 3000):
-   - Edit `docker/adguard/conf/AdGuardHome.yaml`
-   - Under `http:` section, set `address: 0.0.0.0:3000`
-   - This prevents collision with other services (Traefik uses port 80)
-   - Restart AdGuard: `docker compose restart adguard-home`
-5. After setup, you can also access via Traefik: `http://adguard.local` (requires DNS rewrite configuration below)
+4. After setup, you can also access via Traefik: `http://adguard.local` (requires DNS rewrite configuration below)
 
 **Configure DNS Filtering:**
 - Set router/devices to use `<homelab-ip>:53` as DNS server
