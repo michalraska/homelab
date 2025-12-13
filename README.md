@@ -219,8 +219,10 @@ Before setting up the tunnel, create a scoped API token for Let's Encrypt:
 2. Click **"Create Token"**
 3. Select the **"Edit zone DNS"** template
 4. Configure:
-   - **Permissions**: Zone > DNS > Edit, Zone > Zone > Read
-   - **Zone Resources**: Include all zones
+   - **Permissions**:
+     - Zone > DNS > Edit
+     - Zone > Zone > Read
+   - **Zone Resources**: Include > Specific zone > yourdomain.com
 5. Copy the token to `.env` as `CLOUDFLARE_API_KEY`
 6. Also set `ACME_EMAIL` in `.env` to your email for Let's Encrypt notifications
 
