@@ -280,6 +280,16 @@ docker compose ps
 - Set router/devices to use `<homelab-ip>:53` as DNS server
 - All DNS queries will be filtered through AdGuard
 
+**Configure UniFi Network to use AdGuard Home:**
+1. Open UniFi Network Console
+2. Go to **Settings** → **Internet**
+3. Select your WAN connection
+4. Under **DNS Server**, set **Primary Server** to `<homelab-ip>`
+5. Set **Secondary Server** to `86.54.11.13` (DNS4EU fallback)
+6. Click **Apply Changes**
+
+This ensures all devices on your network use AdGuard Home for DNS resolution without manual configuration on each device.
+
 **DNS Rewrites for Internal Services (Important for Traefik Routing):**
 
 Use AdGuard's **DNS rewrites** feature to resolve hostnames to your homelab IP:
