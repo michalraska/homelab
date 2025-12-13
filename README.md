@@ -167,12 +167,16 @@ docker --version
 docker compose version
 ```
 
-### 3. Initial Configuration
+### 3. Clone the Repository
 
 ```bash
-# Clone/navigate to this repository
-cd /path/to/homelab
+git clone git@github.com:michalraska/homelab.git ~/docker
+cd ~/docker
+```
 
+### 4. Initial Configuration
+
+```bash
 # Copy environment template
 cp .env.example .env
 
@@ -180,7 +184,7 @@ cp .env.example .env
 vi .env
 ```
 
-### 4. Required Environment Variables
+### 5. Required Environment Variables
 
 Environment variables are distributed across service-specific directories for better organization.
 The `TZ` (timezone) variable is defined once in the root `.env` and inherited by all services.
@@ -230,7 +234,7 @@ DOMAIN=yourdomain.com
 # No service-specific variables required (TZ inherited from root)
 ```
 
-### 5. Get NordVPN OpenVPN Credentials
+### 6. Get NordVPN OpenVPN Credentials
 
 1. Go to [NordVPN Dashboard](https://my.nordvpn.com/dashboard/)
 2. Navigate to **Manual Setup** or **Service Credentials**
@@ -238,7 +242,7 @@ DOMAIN=yourdomain.com
 4. Copy username and password to `arr/.env` as `OPENVPN_USER` and `OPENVPN_PASSWORD`
 5. Set `SERVER_COUNTRIES` to your preferred location (e.g., `Czech Republic`)
 
-### 6. Set Up Cloudflare for HTTPS (Let's Encrypt DNS Challenge)
+### 7. Set Up Cloudflare for HTTPS (Let's Encrypt DNS Challenge)
 
 Before setting up the tunnel, create a scoped API token for Let's Encrypt:
 
@@ -257,7 +261,7 @@ ACME_EMAIL=your-email@example.com
 CLOUDFLARE_API_KEY=your_scoped_api_token_here
 ```
 
-### 7. Set Up Cloudflare Tunnel
+### 8. Set Up Cloudflare Tunnel
 
 ```bash
 # Install cloudflared locally (if not already)
@@ -273,7 +277,7 @@ cloudflared tunnel token homelab
 # Copy the token to cloudflare-tunnel/.env as CLOUDFLARE_TUNNEL_TOKEN
 ```
 
-### 8. Start Services
+### 9. Start Services
 
 ```bash
 # Validate compose file
