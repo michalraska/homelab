@@ -103,7 +103,35 @@ docker/
 
 ## Setup Instructions
 
-### 1. Install Docker Engine (Ubuntu)
+### 1. Secure SSH Access
+
+Before proceeding, secure SSH access to your server using key-based authentication:
+
+**On your local machine (generate SSH key if you don't have one):**
+```bash
+ssh-keygen -t ed25519 -C "your-email@example.com"
+ssh-copy-id user@<homelab-ip>
+```
+
+Alternatively, use [1Password SSH Agent](https://developer.1password.com/docs/ssh/get-started/) to manage SSH keys securely.
+
+**On the server (apply hardened SSH configuration):**
+```bash
+# Copy the provided SSH hardening configuration
+sudo cp ssh/sshd_config /etc/ssh/sshd_config.d/99-hardening.conf
+
+# Test configuration before applying
+sudo sshd -t
+
+# Restart SSH service
+sudo systemctl restart ssh
+```
+
+**Important:** Keep your current SSH session open and test login in a new terminal before closing. This prevents lockout if configuration is incorrect.
+
+The configuration disables password authentication, root login, and enforces modern cryptographic algorithms. See [ssh/sshd_config](ssh/sshd_config) for details.
+
+### 2. Install Docker Engine (Ubuntu)
 
 Install Docker using the official APT repository (recommended for production):
 
@@ -139,7 +167,7 @@ docker --version
 docker compose version
 ```
 
-### 2. Initial Configuration
+### 3. Initial Configuration
 
 ```bash
 # Clone/navigate to this repository
@@ -152,7 +180,7 @@ cp .env.example .env
 vi .env
 ```
 
-### 3. Required Environment Variables
+### 4. Required Environment Variables
 
 Environment variables are distributed across service-specific directories for better organization.
 The `TZ` (timezone) variable is defined once in the root `.env` and inherited by all services.
@@ -202,7 +230,7 @@ DOMAIN=yourdomain.com
 # No service-specific variables required (TZ inherited from root)
 ```
 
-### 4. Get NordVPN OpenVPN Credentials
+### 5. Get NordVPN OpenVPN Credentials
 
 1. Go to [NordVPN Dashboard](https://my.nordvpn.com/dashboard/)
 2. Navigate to **Manual Setup** or **Service Credentials**
@@ -210,7 +238,7 @@ DOMAIN=yourdomain.com
 4. Copy username and password to `arr/.env` as `OPENVPN_USER` and `OPENVPN_PASSWORD`
 5. Set `SERVER_COUNTRIES` to your preferred location (e.g., `Czech Republic`)
 
-### 5. Set Up Cloudflare for HTTPS (Let's Encrypt DNS Challenge)
+### 6. Set Up Cloudflare for HTTPS (Let's Encrypt DNS Challenge)
 
 Before setting up the tunnel, create a scoped API token for Let's Encrypt:
 
@@ -229,7 +257,7 @@ ACME_EMAIL=your-email@example.com
 CLOUDFLARE_API_KEY=your_scoped_api_token_here
 ```
 
-### 6. Set Up Cloudflare Tunnel
+### 7. Set Up Cloudflare Tunnel
 
 ```bash
 # Install cloudflared locally (if not already)
@@ -245,7 +273,7 @@ cloudflared tunnel token homelab
 # Copy the token to cloudflare-tunnel/.env as CLOUDFLARE_TUNNEL_TOKEN
 ```
 
-### 7. Start Services
+### 8. Start Services
 
 ```bash
 # Validate compose file

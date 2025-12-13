@@ -1,0 +1,50 @@
+# Secure SSH Configuration for Homelab Server
+# Copy to /etc/ssh/sshd_config.d/99-hardening.conf
+
+# Disable root login
+PermitRootLogin no
+
+# Disable password authentication (use SSH keys only)
+PasswordAuthentication no
+PermitEmptyPasswords no
+
+# Disable keyboard-interactive authentication
+KbdInteractiveAuthentication no
+
+# Enable public key authentication
+PubkeyAuthentication yes
+
+# Limit authentication attempts
+MaxAuthTries 3
+MaxSessions 3
+
+# Connection timeout settings
+LoginGraceTime 30
+ClientAliveInterval 300
+ClientAliveCountMax 2
+
+# Disable unused authentication methods
+HostbasedAuthentication no
+IgnoreRhosts yes
+
+# Disable X11 and agent forwarding (enable if needed)
+X11Forwarding no
+AllowAgentForwarding no
+
+# Disable TCP forwarding (enable if needed for tunnels)
+AllowTcpForwarding no
+
+# Use strong key exchange algorithms
+KexAlgorithms sntrup761x25519-sha512@openssh.com,curve25519-sha256,curve25519-sha256@libssh.org
+
+# Use strong ciphers
+Ciphers chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes128-gcm@openssh.com
+
+# Use strong MACs
+MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com
+
+# Logging
+LogLevel VERBOSE
+
+# Restrict to specific users (uncomment and adjust)
+# AllowUsers your-username
