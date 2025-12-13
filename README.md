@@ -95,7 +95,7 @@ docker/
 ## Prerequisites
 
 1. **Operating System**: Ubuntu 24.04 LTS (tested and recommended)
-2. **Docker** (28.5+) and **Docker Compose** (2.40+)
+2. **Docker** (29.1+) and **Docker Compose** (5.0+)
 3. **Storage**: A filesystem supporting hardlinks (ext4, btrfs, etc.) for optimal *arr stack performance
 4. **Cloudflare Account** with a domain
 5. **NordVPN Account** with OpenVPN service credentials
