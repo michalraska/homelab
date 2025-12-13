@@ -228,19 +228,16 @@ Before setting up the tunnel, create a scoped API token for Let's Encrypt:
 
 ### 8. Set Up Cloudflare Tunnel
 
-```bash
-# Install cloudflared locally (if not already)
-# macOS: brew install cloudflare/cloudflare/cloudflared
-# Linux: curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o cloudflared
-
-# Create tunnel
-cloudflared tunnel create homelab
-
-# Generate token
-cloudflared tunnel token homelab
-
-# Copy the token to .env as CLOUDFLARE_TUNNEL_TOKEN
-```
+1. Go to [Cloudflare Zero Trust Dashboard](https://one.dash.cloudflare.com/)
+2. Navigate to **Networks** → **Connectors**
+3. Click **Create a tunnel**
+4. Select **Cloudflared** as the connector type
+5. Name your tunnel (e.g., `homelab`)
+6. Copy the tunnel token and save it to `.env` as `CLOUDFLARE_TUNNEL_TOKEN`
+7. Skip the connector installation step (Docker will handle this)
+8. Configure public hostnames for your services:
+   - `jellyfin.yourdomain.com` → `http://traefik:80`
+   - `immich.yourdomain.com` → `http://traefik:80`
 
 ### 9. Start Services
 
