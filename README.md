@@ -205,9 +205,9 @@ See `.env.example` for the complete template with documentation.
 
 ### 6. Get NordVPN OpenVPN Credentials
 
-1. Go to [NordVPN Dashboard](https://my.nordvpn.com/dashboard/)
-2. Navigate to **Manual Setup** or **Service Credentials**
-3. Generate service credentials for OpenVPN
+1. Go to [NordVPN Dashboard](https://my.nordaccount.com/dashboard/)
+2. Navigate to **NordVPN** > **Manual setup** > **Service credentials**
+3. Copy the service credentials for OpenVPN
 4. Copy username and password to `.env` as `OPENVPN_USER` and `OPENVPN_PASSWORD`
 5. Set `SERVER_COUNTRIES` to your preferred location (e.g., `Czech Republic`)
 
