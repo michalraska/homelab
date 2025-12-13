@@ -186,60 +186,29 @@ vi .env
 
 ### 5. Required Environment Variables
 
-Environment variables are distributed across service-specific directories for better organization.
-The `TZ` (timezone) variable is defined once in the root `.env` and inherited by all services.
+All environment variables are configured in a single `.env` file at the repository root.
+See `.env.example` for the complete template with documentation.
 
-**Root `.env`** (shared settings):
-```bash
-TZ=Europe/Prague                             # System timezone (inherited by all services)
-```
+**Key variables:**
 
-**Traefik** (`traefik/.env`):
-```bash
-ACME_EMAIL=your-email@example.com           # Let's Encrypt notifications
-CLOUDFLARE_API_KEY=<scoped API token>       # Cloudflare DNS challenge token
-```
-
-**Cloudflare Tunnel** (`cloudflare-tunnel/.env`):
-```bash
-CLOUDFLARE_TUNNEL_TOKEN=<generated token>   # From cloudflared tunnel token command
-```
-
-**Immich** (`immich/.env`):
-```bash
-DOMAIN=yourdomain.com                       # Your domain
-DB_USERNAME=immich
-DB_PASSWORD=<secure password>               # Generate with: openssl rand -base64 32
-DB_DATABASE_NAME=immich
-IMMICH_VERSION=release
-```
-
-**ARR Stack** (`arr/.env`):
-```bash
-DOMAIN=yourdomain.com                       # Your domain
-PUID=1000                                   # Your user ID
-PGID=1000                                   # Your group ID
-OPENVPN_USER=<nordvpn service username>     # NordVPN service credentials
-OPENVPN_PASSWORD=<nordvpn service password>
-SERVER_COUNTRIES=Czech Republic             # VPN server location
-```
-
-**Dashdot** (`dashdot/.env`):
-```bash
-DOMAIN=yourdomain.com
-```
-
-**AdGuard** (`adguard/.env`):
-```bash
-# No service-specific variables required (TZ inherited from root)
-```
+| Variable | Description |
+|----------|-------------|
+| `TZ` | System timezone (e.g., `Europe/Prague`) |
+| `DOMAIN` | Your domain name (e.g., `yourdomain.com`) |
+| `PUID` / `PGID` | User/group IDs for file ownership |
+| `ACME_EMAIL` | Email for Let's Encrypt notifications |
+| `CLOUDFLARE_API_KEY` | Cloudflare API token for DNS challenge |
+| `CLOUDFLARE_TUNNEL_TOKEN` | Cloudflare Tunnel token |
+| `DB_PASSWORD` | Immich PostgreSQL password |
+| `OPENVPN_USER` / `OPENVPN_PASSWORD` | NordVPN service credentials |
+| `SERVER_COUNTRIES` | VPN server location |
 
 ### 6. Get NordVPN OpenVPN Credentials
 
 1. Go to [NordVPN Dashboard](https://my.nordvpn.com/dashboard/)
 2. Navigate to **Manual Setup** or **Service Credentials**
 3. Generate service credentials for OpenVPN
-4. Copy username and password to `arr/.env` as `OPENVPN_USER` and `OPENVPN_PASSWORD`
+4. Copy username and password to `.env` as `OPENVPN_USER` and `OPENVPN_PASSWORD`
 5. Set `SERVER_COUNTRIES` to your preferred location (e.g., `Czech Republic`)
 
 ### 7. Set Up Cloudflare for HTTPS (Let's Encrypt DNS Challenge)
@@ -252,14 +221,8 @@ Before setting up the tunnel, create a scoped API token for Let's Encrypt:
 4. Configure:
    - **Permissions**: Zone > DNS > Edit, Zone > Zone > Read
    - **Zone Resources**: Include all zones
-5. Copy the token to `traefik/.env` as `CLOUDFLARE_API_KEY`
-6. Also set `ACME_EMAIL` to your email for Let's Encrypt notifications
-
-```bash
-# Example traefik/.env configuration
-ACME_EMAIL=your-email@example.com
-CLOUDFLARE_API_KEY=your_scoped_api_token_here
-```
+5. Copy the token to `.env` as `CLOUDFLARE_API_KEY`
+6. Also set `ACME_EMAIL` in `.env` to your email for Let's Encrypt notifications
 
 ### 8. Set Up Cloudflare Tunnel
 
@@ -274,7 +237,7 @@ cloudflared tunnel create homelab
 # Generate token
 cloudflared tunnel token homelab
 
-# Copy the token to cloudflare-tunnel/.env as CLOUDFLARE_TUNNEL_TOKEN
+# Copy the token to .env as CLOUDFLARE_TUNNEL_TOKEN
 ```
 
 ### 9. Start Services
