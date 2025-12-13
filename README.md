@@ -257,6 +257,33 @@ docker compose ps
 
 ## Post-Setup Configuration
 
+### Configure systemd-resolved for AdGuard Home (Ubuntu Server)
+
+To use AdGuard Home as the primary DNS resolver on Ubuntu Server, configure systemd-resolved:
+
+```bash
+# Copy the provided resolved configuration
+sudo mkdir -p /etc/systemd/resolved.conf.d
+sudo cp adguard/resolved.conf /etc/systemd/resolved.conf.d/adguardhome.conf
+
+# Backup and replace /etc/resolv.conf
+sudo mv /etc/resolv.conf /etc/resolv.conf.backup
+sudo ln -s /run/systemd/resolve/resolv.conf /etc/resolv.conf
+
+# Restart systemd-resolved
+sudo systemctl restart systemd-resolved
+
+# Verify DNS configuration
+resolvectl status
+nslookup example.com 127.0.0.1
+```
+
+This configuration routes all DNS queries to AdGuard Home on localhost and disables the stub DNS listener to avoid port conflicts. See [adguard/resolved.conf](adguard/resolved.conf) for details.
+
+**Important Notes:**
+- This configuration requires AdGuard Home to be running (`docker compose up -d adguard-home`)
+- To revert: `sudo rm /etc/resolv.conf && sudo mv /etc/resolv.conf.backup /etc/resolv.conf && sudo systemctl restart systemd-resolved`
+
 ### AdGuard Home
 
 **Initial Setup:**
@@ -320,54 +347,6 @@ Use AdGuard's **DNS rewrites** feature to resolve hostnames to your homelab IP:
 - Traefik bridges traffic from `ingress` network to `services` network
 - DNS ports (53) remain exposed on host for network-wide DNS filtering
 - Web UI (3000) is only accessible through Traefik routing
-
-### Configure systemd-resolved for AdGuard Home (Ubuntu Server)
-
-To use AdGuard Home as the primary DNS resolver on Ubuntu Server, configure systemd-resolved:
-
-**1. Create systemd-resolved configuration file:**
-
-```bash
-sudo mkdir -p /etc/systemd/resolved.conf.d
-sudo tee /etc/systemd/resolved.conf.d/adguardhome.conf > /dev/null <<EOF
-[Resolve]
-DNS=127.0.0.1
-DNSStubListener=no
-EOF
-```
-
-**2. Backup and replace /etc/resolv.conf:**
-
-```bash
-sudo mv /etc/resolv.conf /etc/resolv.conf.backup
-sudo ln -s /run/systemd/resolve/resolv.conf /etc/resolv.conf
-```
-
-**3. Restart systemd-resolved:**
-
-```bash
-sudo systemctl restart systemd-resolved
-```
-
-**4. Verify DNS configuration:**
-
-```bash
-# Check that 127.0.0.1 is configured as DNS
-resolvectl status
-
-# Test DNS resolution through AdGuard
-nslookup example.com 127.0.0.1
-```
-
-**What this does:**
-- `DNS=127.0.0.1`: Routes all DNS queries to AdGuard Home on localhost
-- `DNSStubListener=no`: Disables the local stub DNS listener (127.0.0.53) to avoid conflicts
-- Symlinks `/etc/resolv.conf` to systemd-resolved's config for persistence
-- Ensures AdGuard Home becomes the system-wide DNS resolver
-
-**Important Notes:**
-- This configuration requires AdGuard Home to be running (`docker compose up -d adguard-home`)
-- To revert: `sudo rm /etc/resolv.conf && sudo mv /etc/resolv.conf.backup /etc/resolv.conf && sudo systemctl restart systemd-resolved`
 
 ### Traefik Dashboard (Internal Only)
 
