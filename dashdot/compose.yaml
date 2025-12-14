@@ -13,6 +13,6 @@ services:
       - services
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.dashdot.rule=Host(`dashdot.${DOMAIN}`)"
+      - "traefik.http.routers.dashdot.rule=Host(`dashdot.local`)"
       - "traefik.http.routers.dashdot.entrypoints=web"
       - "traefik.http.services.dashdot.loadbalancer.server.port=3001"

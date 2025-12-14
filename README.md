@@ -9,12 +9,12 @@ Docker Compose setup for media management, photo storage, DNS filtering, and ext
 | **Traefik** | Reverse proxy | `http://traefik.local` (intranet) | ingress, services |
 | **Jellyfin** | Media server | `https://jellyfin.yourdomain` (external + intranet) | services |
 | **Immich** | Photo storage | `https://immich.yourdomain` (external + intranet) | services, immich |
-| **Sonarr** | TV automation | `http://sonarr.yourdomain` (intranet) | services |
-| **Radarr** | Movie automation | `http://radarr.yourdomain` (intranet) | services |
-| **Prowlarr** | Indexer manager | `http://prowlarr.yourdomain` (intranet) | services |
-| **Bazarr** | Subtitle manager | `http://bazarr.yourdomain` (intranet) | services |
-| **Homarr** | Dashboard | `http://homarr.yourdomain` (intranet) | services |
-| **Dashdot** | System monitor | `http://dashdot.yourdomain` (intranet) | services |
+| **Sonarr** | TV automation | `http://sonarr.local` (intranet) | services |
+| **Radarr** | Movie automation | `http://radarr.local` (intranet) | services |
+| **Prowlarr** | Indexer manager | `http://prowlarr.local` (intranet) | services |
+| **Bazarr** | Subtitle manager | `http://bazarr.local` (intranet) | services |
+| **Homarr** | Dashboard | `http://homarr.local` (intranet) | services |
+| **Dashdot** | System monitor | `http://dashdot.local` (intranet) | services |
 | **AdGuard Home** | DNS filtering | `http://adguard.local` (intranet), DNS:53 | services |
 | **qBittorrent** | Download client | `http://localhost:8080` (VPN) | vpn-isolated (via Gluetun) |
 | **Gluetun** | VPN gateway | Internal only | vpn-isolated, services |
@@ -40,12 +40,12 @@ Traefik on port 80 (HTTP)
    ├─→ AdGuard Home Web UI via adguard.local (3000)
    ├─→ Jellyfin via jellyfin.yourdomain (8096)
    ├─→ Immich via immich.yourdomain (2283)
-   ├─→ Sonarr via sonarr.yourdomain (8989)
-   ├─→ Radarr via radarr.yourdomain (7878)
-   ├─→ Prowlarr via prowlarr.yourdomain (9696)
-   ├─→ Bazarr via bazarr.yourdomain (6767)
-   ├─→ Homarr via homarr.yourdomain (7575)
-   └─→ Dashdot via dashdot.yourdomain (3001)
+   ├─→ Sonarr via sonarr.local (8989)
+   ├─→ Radarr via radarr.local (7878)
+   ├─→ Prowlarr via prowlarr.local (9696)
+   ├─→ Bazarr via bazarr.local (6767)
+   ├─→ Homarr via homarr.local (7575)
+   └─→ Dashdot via dashdot.local (3001)
 
 VPN Network (Isolated)
    ├─→ Gluetun (VPN Gateway) → Also on services network for arr access
@@ -317,20 +317,20 @@ Use AdGuard's **DNS rewrites** feature to resolve hostnames to your homelab IP:
    ```
    traefik.local → <homelab-ip>
    adguard.local → <homelab-ip>
+   sonarr.local → <homelab-ip>
+   radarr.local → <homelab-ip>
+   prowlarr.local → <homelab-ip>
+   bazarr.local → <homelab-ip>
+   homarr.local → <homelab-ip>
+   dashdot.local → <homelab-ip>
    ```
-3. Add wildcard entry for your domain (replace `yourdomain` with your actual domain):
+3. Add wildcard entry for your domain (for externally-exposed services):
    ```
    *.yourdomain → <homelab-ip>
    ```
-   This will resolve all service URLs like:
+   This will resolve external service URLs for local access:
    - jellyfin.yourdomain
-   - sonarr.yourdomain
-   - radarr.yourdomain
-   - prowlarr.yourdomain
-   - bazarr.yourdomain
    - immich.yourdomain
-   - homarr.yourdomain
-   - dashdot.yourdomain
 
 **Why This Matters:**
 - Without DNS rewrites, `.local` hostnames won't resolve on your network
@@ -360,7 +360,7 @@ Use AdGuard's **DNS rewrites** feature to resolve hostnames to your homelab IP:
    - Movies: `/data/media/movies`
 
 ### Sonarr
-1. Access: `http://sonarr.yourdomain`
+1. Access: `http://sonarr.local`
 2. Configure root folder: `/data/media/tv`
 3. Set download client to qBittorrent:
    - Host: `gluetun`
@@ -368,7 +368,7 @@ Use AdGuard's **DNS rewrites** feature to resolve hostnames to your homelab IP:
    - Category: `sonarr`
 
 ### Radarr
-1. Access: `http://radarr.yourdomain`
+1. Access: `http://radarr.local`
 2. Configure root folder: `/data/media/movies`
 3. Set download client to qBittorrent:
    - Host: `gluetun`
@@ -376,23 +376,23 @@ Use AdGuard's **DNS rewrites** feature to resolve hostnames to your homelab IP:
    - Category: `radarr`
 
 ### Prowlarr
-1. Access: `http://prowlarr.yourdomain`
+1. Access: `http://prowlarr.local`
 2. Add indexers
 3. Sync to Sonarr and Radarr
 
 ### Bazarr
-1. Access: `http://bazarr.yourdomain`
+1. Access: `http://bazarr.local`
 2. Configure subtitle providers
 3. Link to Sonarr and Radarr
 
 ### Homarr (Dashboard)
-1. Access: `http://homarr.yourdomain`
+1. Access: `http://homarr.local`
 2. Complete initial setup
 3. Add service integrations for all your homelab services
 4. Configure widgets and customize layout
 
 ### Dashdot (System Monitor)
-1. Access: `http://dashdot.yourdomain`
+1. Access: `http://dashdot.local`
 2. View real-time system resources
 3. Monitor CPU, RAM, disk I/O, and network usage
 4. No configuration needed - auto-discovers system info
