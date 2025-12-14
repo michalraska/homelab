@@ -315,6 +315,7 @@ Use AdGuard's **DNS rewrites** feature to resolve hostnames to your homelab IP:
 1. Go to **Filters** → **DNS rewrites**
 2. Add entries for `.local` domains:
    ```
+   homelab.local → <homelab-ip>
    traefik.local → <homelab-ip>
    adguard.local → <homelab-ip>
    sonarr.local → <homelab-ip>
@@ -324,13 +325,11 @@ Use AdGuard's **DNS rewrites** feature to resolve hostnames to your homelab IP:
    homarr.local → <homelab-ip>
    dashdot.local → <homelab-ip>
    ```
-3. Add wildcard entry for your domain (for externally-exposed services):
+3. Add entries for externally-exposed services (for local access):
    ```
-   *.yourdomain → <homelab-ip>
+   jellyfin.yourdomain → <homelab-ip>
+   immich.yourdomain → <homelab-ip>
    ```
-   This will resolve external service URLs for local access:
-   - jellyfin.yourdomain
-   - immich.yourdomain
 
 **Why This Matters:**
 - Without DNS rewrites, `.local` hostnames won't resolve on your network
@@ -343,7 +342,7 @@ Use AdGuard's **DNS rewrites** feature to resolve hostnames to your homelab IP:
 - AdGuard runs on `services` network (internal only)
 - Traefik bridges traffic from `ingress` network to `services` network
 - DNS ports (53) remain exposed on host for network-wide DNS filtering
-- Web UI (3000) is only accessible through Traefik routing
+- Web UI accessible via Traefik (`adguard.local`) or directly (`homelab.local:3000`)
 
 ### Traefik Dashboard (Internal Only)
 
