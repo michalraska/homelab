@@ -96,7 +96,7 @@ docker/
 
 1. **Operating System**: Ubuntu 24.04 LTS (tested and recommended)
 2. **Docker** (29.1+) and **Docker Compose** (5.0+)
-3. **Storage**: Sufficient disk space with LVM (Ubuntu Server default). LVM may need extension to use full disk - see setup instructions.
+3. **Storage**: Sufficient disk space. LVM recommended (Ubuntu Server default) - may need extension to use full disk, see setup instructions.
 4. **Filesystem**: ext4 or similar supporting hardlinks for optimal *arr stack performance
 5. **Hardware**: Intel CPU with QuickSync support (optional, for Jellyfin hardware transcoding and Immich machine learning acceleration)
 6. **Cloudflare Account** with a domain
