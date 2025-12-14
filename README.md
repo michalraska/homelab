@@ -98,9 +98,10 @@ docker/
 2. **Docker** (29.1+) and **Docker Compose** (5.0+)
 3. **Storage**: Sufficient disk space with LVM (Ubuntu Server default). LVM may need extension to use full disk - see setup instructions.
 4. **Filesystem**: ext4 or similar supporting hardlinks for optimal *arr stack performance
-5. **Cloudflare Account** with a domain
-6. **NordVPN Account** with OpenVPN service credentials
-7. **User/Group IDs**: Know your PUID and PGID (typically 1000:1000)
+5. **Hardware**: Intel CPU with QuickSync support (optional, for Jellyfin hardware transcoding and Immich machine learning acceleration)
+6. **Cloudflare Account** with a domain
+7. **NordVPN Account** with OpenVPN service credentials
+8. **User/Group IDs**: Know your PUID and PGID (typically 1000:1000)
 
 ## Setup Instructions
 
@@ -418,6 +419,11 @@ Use AdGuard's **DNS rewrites** feature to resolve hostnames to your homelab IP:
 3. Add libraries:
    - TV Shows: `/data/media/tv`
    - Movies: `/data/media/movies`
+4. Enable Intel QuickSync hardware acceleration:
+   - Go to **Dashboard → Playback → Transcoding**
+   - Set **Hardware acceleration** to `Intel QuickSync (QSV)`
+   - Enable hardware decoding for supported codecs (H.264, HEVC, etc.)
+   - The compose file already passes `/dev/dri` to the container
 
 ### Dashdot (System Monitor)
 1. Access: `http://dashdot.local`
