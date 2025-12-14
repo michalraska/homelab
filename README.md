@@ -106,7 +106,7 @@ docker/
 
 ### 1. Secure SSH Access
 
-Before proceeding, secure SSH access to your server using key-based authentication:
+Before proceeding, secure SSH access to your server using key-based authentication.
 
 **On your local machine (generate SSH key if you don't have one):**
 ```bash
@@ -114,21 +114,43 @@ ssh-keygen -t ed25519 -C "your-email@example.com"
 ssh-copy-id user@<homelab-ip>
 ```
 
-Alternatively, use [1Password SSH Agent](https://developer.1password.com/docs/ssh/get-started/) to manage SSH keys securely.
+Alternatively, use [1Password SSH Agent](https://developer.1password.com/docs/ssh/get-started/) to manage SSH keys securely with biometric authentication.
+
+**Copy public key to server manually (if not using `ssh-copy-id`):**
+```bash
+# Create .ssh directory and add public key
+mkdir -p ~/.ssh && chmod 700 ~/.ssh
+echo "YOUR_PUBLIC_KEY_HERE" >> ~/.ssh/authorized_keys
+chmod 600 ~/.ssh/authorized_keys
+```
+
+**Tip:** If using 1Password, copy the public key from your SSH key item and paste it in place of `YOUR_PUBLIC_KEY_HERE`.
 
 **On the server (apply hardened SSH configuration):**
 ```bash
 # Copy the provided SSH hardening configuration
-sudo cp ssh/sshd_config /etc/ssh/sshd_config.d/99-hardening.conf
+# Named 00-* to load BEFORE cloud-init's 50-cloud-init.conf (OpenSSH uses first-match-wins)
+sudo cp ~/docker/ssh/sshd_config /etc/ssh/sshd_config.d/00-hardening.conf
 
 # Test configuration before applying
 sudo sshd -t
 
 # Restart SSH service
 sudo systemctl restart ssh
+
+# Verify password auth is disabled in effective config
+sudo sshd -T | grep -i passwordauthentication
 ```
 
+**Note:** Ubuntu Server with cloud-init has `/etc/ssh/sshd_config.d/50-cloud-init.conf` which enables password authentication. OpenSSH uses **first-match-wins** for config options, so our `00-hardening.conf` must load before it to take effect.
+
 **Important:** Keep your current SSH session open and test login in a new terminal before closing. This prevents lockout if configuration is incorrect.
+
+**Verify password authentication is disabled (from your local machine):**
+```bash
+ssh -o PreferredAuthentications=password -o PubkeyAuthentication=no user@<homelab-ip>
+```
+If properly configured, you'll see `Permission denied (publickey).` instead of a password prompt.
 
 The configuration disables password authentication, root login, and enforces modern cryptographic algorithms. See [ssh/sshd_config](ssh/sshd_config) for details.
 
