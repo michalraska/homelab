@@ -177,19 +177,22 @@ cd ~/docker
 ### 4. Initial Configuration
 
 ```bash
-# Copy environment template
+# Copy root environment template
 cp .env.example .env
 
 # Edit .env with your specific values
 vi .env
+
+# Copy Immich environment template
+cp immich/.env.example immich/.env
+
+# Edit Immich .env with your specific values
+vi immich/.env
 ```
 
 ### 5. Required Environment Variables
 
-All environment variables are configured in a single `.env` file at the repository root.
-See `.env.example` for the complete template with documentation.
-
-**Key variables:**
+**Root `.env` file** - shared configuration for most services:
 
 | Variable | Description |
 |----------|-------------|
@@ -199,9 +202,18 @@ See `.env.example` for the complete template with documentation.
 | `ACME_EMAIL` | Email for Let's Encrypt notifications |
 | `CLOUDFLARE_API_KEY` | Cloudflare API token for DNS challenge |
 | `CLOUDFLARE_TUNNEL_TOKEN` | Cloudflare Tunnel token |
-| `DB_PASSWORD` | Immich PostgreSQL password |
 | `OPENVPN_USER` / `OPENVPN_PASSWORD` | NordVPN service credentials |
 | `SERVER_COUNTRIES` | VPN server location |
+
+**Immich `immich/.env` file** - dedicated configuration for Immich (follows official Immich setup pattern):
+
+| Variable | Description |
+|----------|-------------|
+| `DOMAIN` | Your domain name (required for Traefik routing) |
+| `DB_USERNAME` | PostgreSQL username (default: `postgres`) |
+| `DB_DATABASE_NAME` | PostgreSQL database name (default: `immich`) |
+| `DB_PASSWORD` | PostgreSQL password (generate with `openssl rand -base64 32`) |
+| `IMMICH_VERSION` | Immich version tag (default: `release`) |
 
 ### 6. Get NordVPN OpenVPN Credentials
 

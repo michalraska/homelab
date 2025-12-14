@@ -9,6 +9,8 @@ services:
     volumes:
       - ./library:/data
       - /etc/localtime:/etc/localtime:ro
+    env_file:
+      - .env
     security_opt:
       - no-new-privileges:true
     networks:
