@@ -96,10 +96,11 @@ docker/
 
 1. **Operating System**: Ubuntu 24.04 LTS (tested and recommended)
 2. **Docker** (29.1+) and **Docker Compose** (5.0+)
-3. **Storage**: A filesystem supporting hardlinks (ext4, btrfs, etc.) for optimal *arr stack performance
-4. **Cloudflare Account** with a domain
-5. **NordVPN Account** with OpenVPN service credentials
-6. **User/Group IDs**: Know your PUID and PGID (typically 1000:1000)
+3. **Storage**: Sufficient disk space with LVM (Ubuntu Server default). LVM may need extension to use full disk - see setup instructions.
+4. **Filesystem**: ext4 or similar supporting hardlinks for optimal *arr stack performance
+5. **Cloudflare Account** with a domain
+6. **NordVPN Account** with OpenVPN service credentials
+7. **User/Group IDs**: Know your PUID and PGID (typically 1000:1000)
 
 ## Setup Instructions
 
@@ -131,7 +132,25 @@ sudo systemctl restart ssh
 
 The configuration disables password authentication, root login, and enforces modern cryptographic algorithms. See [ssh/sshd_config](ssh/sshd_config) for details.
 
-### 2. Install Docker Engine (Ubuntu)
+### 2. Extend LVM to Use Full Disk (Ubuntu Server)
+
+Ubuntu Server with LVM often allocates only a portion of the disk by default. Check and extend if needed:
+
+```bash
+# Check available space in volume group
+sudo vgs
+
+# If PFree shows unused space, extend the logical volume
+sudo lvextend -l +100%FREE /dev/ubuntu-vg/ubuntu-lv
+
+# Resize the filesystem to use the new space
+sudo resize2fs /dev/ubuntu-vg/ubuntu-lv
+
+# Verify the new size
+df -h /
+```
+
+### 3. Install Docker Engine (Ubuntu)
 
 Install Docker using the official APT repository (recommended for production):
 
@@ -167,14 +186,14 @@ docker --version
 docker compose version
 ```
 
-### 3. Clone the Repository
+### 4. Clone the Repository
 
 ```bash
 git clone git@github.com:michalraska/homelab.git ~/docker
 cd ~/docker
 ```
 
-### 4. Initial Configuration
+### 5. Initial Configuration
 
 ```bash
 # Copy root environment template
@@ -190,7 +209,7 @@ cp immich/.env.example immich/.env
 vi immich/.env
 ```
 
-### 5. Required Environment Variables
+### 6. Required Environment Variables
 
 **Root `.env` file** - shared configuration for most services:
 
@@ -215,7 +234,7 @@ vi immich/.env
 | `DB_PASSWORD` | PostgreSQL password (generate with `openssl rand -base64 32`) |
 | `IMMICH_VERSION` | Immich version tag (default: `release`) |
 
-### 6. Get NordVPN OpenVPN Credentials
+### 7. Get NordVPN OpenVPN Credentials
 
 1. Go to [NordVPN Dashboard](https://my.nordaccount.com/dashboard/)
 2. Navigate to **NordVPN** > **Manual setup** > **Service credentials**
@@ -223,7 +242,7 @@ vi immich/.env
 4. Copy username and password to `.env` as `OPENVPN_USER` and `OPENVPN_PASSWORD`
 5. Set `SERVER_COUNTRIES` to your preferred location (e.g., `Czech Republic`)
 
-### 7. Set Up Cloudflare for HTTPS (Let's Encrypt DNS Challenge)
+### 8. Set Up Cloudflare for HTTPS (Let's Encrypt DNS Challenge)
 
 Before setting up the tunnel, create a scoped API token for Let's Encrypt:
 
@@ -238,7 +257,7 @@ Before setting up the tunnel, create a scoped API token for Let's Encrypt:
 5. Copy the token to `.env` as `CLOUDFLARE_API_KEY`
 6. Also set `ACME_EMAIL` in `.env` to your email for Let's Encrypt notifications
 
-### 8. Set Up Cloudflare Tunnel
+### 9. Set Up Cloudflare Tunnel
 
 1. Go to [Cloudflare Zero Trust Dashboard](https://one.dash.cloudflare.com/)
 2. Navigate to **Networks** → **Connectors**
@@ -251,7 +270,7 @@ Before setting up the tunnel, create a scoped API token for Let's Encrypt:
    - `jellyfin.yourdomain.com` → `http://traefik:80`
    - `immich.yourdomain.com` → `http://traefik:80`
 
-### 9. Start Services
+### 10. Start Services
 
 ```bash
 # Validate compose file
