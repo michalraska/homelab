@@ -403,6 +403,13 @@ Use AdGuard's **DNS rewrites** feature to resolve hostnames to your homelab IP:
 2. Verify all services are discovered
 3. Check router/service status
 
+### Immich
+1. Access: `https://immich.yourdomain` (same URL works internally and externally)
+   - **Internal path**: AdGuard DNS rewrite → Traefik → Immich (TLS via Let's Encrypt)
+   - **External path**: Cloudflare Tunnel → Traefik → Immich (TLS via Let's Encrypt)
+2. Create initial admin account
+3. Configure backup directory
+
 ### Jellyfin
 1. Access: `https://jellyfin.yourdomain` (same URL works internally and externally)
    - **Internal path**: AdGuard DNS rewrite → Traefik → Jellyfin (TLS via Let's Encrypt)
@@ -411,6 +418,28 @@ Use AdGuard's **DNS rewrites** feature to resolve hostnames to your homelab IP:
 3. Add libraries:
    - TV Shows: `/data/media/tv`
    - Movies: `/data/media/movies`
+
+### Dashdot (System Monitor)
+1. Access: `http://dashdot.local`
+2. View real-time system resources
+3. Monitor CPU, RAM, disk I/O, and network usage
+4. No configuration needed - auto-discovers system info
+
+### qBittorrent (Behind VPN)
+1. Access via: `http://homelab.local:8080` (exposed through Gluetun)
+2. Get initial login credentials (default username: `admin`):
+   ```bash
+   docker compose logs qbittorrent | grep -i password
+   ```
+   Look for the temporary password in the logs, then change it in **Tools → Options → Web UI**
+3. Follow [TRaSH Guides qBittorrent Basic Setup](https://trash-guides.info/Downloaders/qBittorrent/Basic-Setup/) for recommended settings
+4. Configure paths and categories for this setup:
+   - **Settings** → **Downloads** → **Default Save Path**: `/data/torrents/`
+   - Create category "radarr" with save path: `/data/torrents/movies/`
+   - Create category "sonarr" with save path: `/data/torrents/tv/`
+5. Verify VPN connection is active:
+   - Check your torrent IP at [TorGuard Check My Torrent IP](https://torguard.net/check-my-torrent-ip-address/) - add the magnet link to qBittorrent and verify the IP shown is your VPN IP, not your real IP
+6. **Important**: All qBittorrent traffic routes through VPN - IP leaks are prevented at network level
 
 ### Sonarr
 1. Access: `http://sonarr.local`
@@ -443,28 +472,6 @@ Use AdGuard's **DNS rewrites** feature to resolve hostnames to your homelab IP:
 2. Complete initial setup
 3. Add service integrations for all your homelab services
 4. Configure widgets and customize layout
-
-### Dashdot (System Monitor)
-1. Access: `http://dashdot.local`
-2. View real-time system resources
-3. Monitor CPU, RAM, disk I/O, and network usage
-4. No configuration needed - auto-discovers system info
-
-### qBittorrent (Behind VPN)
-1. Access via: `http://localhost:8080` (exposed through Gluetun)
-2. Verify VPN connection is active (check IP in WebUI)
-3. Configure categories in qBittorrent WebUI:
-   - **Settings** → **Downloads** → **Default Save Path**: `/data/torrents/`
-   - Create category "radarr" with save path: `/data/torrents/movies/`
-   - Create category "sonarr" with save path: `/data/torrents/tv/`
-4. **Important**: All qBittorrent traffic routes through VPN - IP leaks are prevented at network level
-
-### Immich
-1. Access: `https://immich.yourdomain` (same URL works internally and externally)
-   - **Internal path**: AdGuard DNS rewrite → Traefik → Immich (TLS via Let's Encrypt)
-   - **External path**: Cloudflare Tunnel → Traefik → Immich (TLS via Let's Encrypt)
-2. Create initial admin account
-3. Configure backup directory
 
 ### Cloudflare Tunnel
 1. Access [Cloudflare Dashboard](https://dash.cloudflare.com/)
