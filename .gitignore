@@ -75,7 +75,9 @@ adguard/conf
 immich/library
 immich/db
 
-arr/data
+arr/data/**
+!arr/data/**/
+!arr/data/**/.gitkeep
 arr/bazarr
 arr/gluetun
 arr/homarr

@@ -457,15 +457,15 @@ Use AdGuard's **DNS rewrites** feature to resolve hostnames to your homelab IP:
    - Port: `8080`
    - Category: `radarr`
 
-### Prowlarr
-1. Access: `http://prowlarr.local`
-2. Add indexers
-3. Sync to Sonarr and Radarr
-
 ### Bazarr
 1. Access: `http://bazarr.local`
 2. Configure subtitle providers
 3. Link to Sonarr and Radarr
+
+### Prowlarr
+1. Access: `http://prowlarr.local`
+2. Add indexers
+3. Sync to Sonarr and Radarr
 
 ### Homarr (Dashboard)
 1. Access: `http://homarr.local`
