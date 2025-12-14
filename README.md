@@ -351,10 +351,11 @@ Use AdGuard's **DNS rewrites** feature to resolve hostnames to your homelab IP:
 3. Check router/service status
 
 ### Jellyfin
-1. **Intranet**: `https://jellyfin.yourdomain`
-2. **External**: `https://jellyfin.yourdomain` (HTTPS/TLS with Let's Encrypt)
-3. Complete initial setup
-4. Add libraries:
+1. Access: `https://jellyfin.yourdomain` (same URL works internally and externally)
+   - **Internal path**: AdGuard DNS rewrite → Traefik → Jellyfin (TLS via Let's Encrypt)
+   - **External path**: Cloudflare Tunnel → Traefik → Jellyfin (TLS via Let's Encrypt)
+2. Complete initial setup
+3. Add libraries:
    - TV Shows: `/data/media/tv`
    - Movies: `/data/media/movies`
 
@@ -406,10 +407,11 @@ Use AdGuard's **DNS rewrites** feature to resolve hostnames to your homelab IP:
 4. **Important**: All qBittorrent traffic routes through VPN - IP leaks are prevented at network level
 
 ### Immich
-1. **Intranet**: `https://immich.yourdomain`
-2. **External**: `https://immich.yourdomain` (HTTPS/TLS with Let's Encrypt)
-3. Create initial admin account
-4. Configure backup directory
+1. Access: `https://immich.yourdomain` (same URL works internally and externally)
+   - **Internal path**: AdGuard DNS rewrite → Traefik → Immich (TLS via Let's Encrypt)
+   - **External path**: Cloudflare Tunnel → Traefik → Immich (TLS via Let's Encrypt)
+2. Create initial admin account
+3. Configure backup directory
 
 ### Cloudflare Tunnel
 1. Access [Cloudflare Dashboard](https://dash.cloudflare.com/)
