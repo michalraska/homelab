@@ -459,8 +459,12 @@ Use AdGuard's **DNS rewrites** feature to resolve hostnames to your homelab IP:
 
 ### Bazarr
 1. Access: `http://bazarr.local`
-2. Configure subtitle providers
-3. Link to Sonarr and Radarr
+2. Configure subtitle providers:
+   - [OpenSubtitles.com](https://www.opensubtitles.com/) (registration required)
+3. Configure language profile in **Settings → Languages**:
+   - Add your preferred languages
+   - Create a profile and assign it as default for Series and Movies
+4. Link to Sonarr and Radarr
 
 ### Prowlarr
 1. Access: `http://prowlarr.local`
