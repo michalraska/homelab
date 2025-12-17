@@ -580,6 +580,10 @@ docker volume prune
 docker compose down -v
 ```
 
+## Backup
+
+See [BACKUP_SYNOLOGY_ABB.md](BACKUP_SYNOLOGY_ABB.md) for comprehensive backup setup using Synology Active Backup for Business with rsync over SSH.
+
 ## License
 
 This setup is provided as-is for personal use.
