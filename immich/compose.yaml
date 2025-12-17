@@ -16,6 +16,9 @@ services:
       - REDIS_HOSTNAME=redis
     security_opt:
       - no-new-privileges:true
+    # TODO: Test and enable - drops raw socket access (prevents network sniffing if container is compromised)
+    # cap_drop:
+    #   - NET_RAW
     networks:
       - services
       - immich
@@ -50,6 +53,9 @@ services:
       - model-cache:/cache
     security_opt:
       - no-new-privileges:true
+    # TODO: Test and enable - drops raw socket access (prevents network sniffing if container is compromised)
+    # cap_drop:
+    #   - NET_RAW
     restart: unless-stopped
     healthcheck:
       disable: false
