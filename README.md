@@ -584,6 +584,55 @@ docker compose down -v
 
 See [BACKUP_SYNOLOGY_ABB.md](BACKUP_SYNOLOGY_ABB.md) for comprehensive backup setup using Synology Active Backup for Business with rsync over SSH.
 
+## Restore from Backup
+
+### Restore Immich
+
+1. Stop Immich services:
+
+   ```bash
+   docker compose down immich-server database immich-machine-learning
+   ```
+
+2. Copy the library directory from backup:
+
+   ```bash
+   rsync -ah --progress <backup-source>/library ~/docker/immich/library/library
+   ```
+
+3. Restore the database from the SQL dump:
+
+   ```bash
+   # Start only PostgreSQL
+   docker compose up -d database
+
+   # Wait for Postgres to be ready, then restore the database dump
+   gunzip --stdout ~/docker/immich/library/backups/<latest-backup>.sql.gz \
+   | sed "s/SELECT pg_catalog.set_config('search_path', '', false);/SELECT pg_catalog.set_config('search_path', 'public, pg_catalog', true);/g" \
+   | docker exec -i immich_postgres psql --dbname=immich --username=postgres
+   ```
+
+4. Start all Immich containers:
+
+   ```bash
+   docker compose up -d
+   ```
+
+**Note:** If you encounter database migration conflicts, set `DB_SKIP_MIGRATIONS=true` in `immich/.env` before starting services, then remove it and restart after the restore completes.
+
+**Note:** If you encounter `password authentication failed for user "postgres"`, reset the password to match your `.env`:
+
+```bash
+# Get the password from your .env file
+grep DB_PASSWORD ~/docker/immich/.env
+
+# Reset the password in PostgreSQL
+docker exec -it immich_postgres psql -U postgres -c "ALTER USER postgres WITH PASSWORD '<password-from-env>';"
+
+# Restart Immich
+docker compose up -d
+```
+
 ## License
 
 This setup is provided as-is for personal use.

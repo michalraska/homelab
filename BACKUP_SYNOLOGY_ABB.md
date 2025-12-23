@@ -170,7 +170,7 @@ getfacl ~/docker/adguard
 getfacl ~/docker/adguard/conf/AdGuardHome.yaml
 ```
 
-## Restore Procedures
+## Restore Procedures (via ABB)
 
 Since most Docker service directories are owned by root, ABB cannot restore directly to original locations. Instead, restore to a staging directory and then move files manually.
 
@@ -198,7 +198,7 @@ sudo mv /home/homelab-backup/restoring/home/<user>/docker/<service>/* ~/docker/<
 docker compose start <service-name>
 ```
 
-### Restore Immich
+### Restore Immich (from ABB)
 
 1. Use ABB to restore `/home/<user>/docker/immich/library/` to `/home/homelab-backup/restoring/`
 
