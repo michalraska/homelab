@@ -547,6 +547,13 @@ All services include health checks. Monitor with:
 docker compose ps
 ```
 
+### Disk Health (NVMe)
+
+Check NVMe disk SMART statistics:
+```bash
+sudo nvme smart-log /dev/nvme0
+```
+
 ### Logs
 ```bash
 # All services
@@ -582,7 +589,10 @@ docker compose down -v
 
 ## Backup
 
-See [BACKUP_SYNOLOGY_ABB.md](BACKUP_SYNOLOGY_ABB.md) for comprehensive backup setup using Synology Active Backup for Business with rsync over SSH.
+Two backup solutions are documented:
+
+- **[BACKUP_RESTIC.md](BACKUP_RESTIC.md)** - Restic with rest-server on Synology NAS (Docker). Client-side encryption, deduplication, REST API.
+- **[BACKUP_SYNOLOGY_ABB.md](BACKUP_SYNOLOGY_ABB.md)** - Synology Active Backup for Business with rsync over SSH. GUI-based, native Synology integration.
 
 ## Restore from Backup
 
