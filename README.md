@@ -348,19 +348,31 @@ This configuration routes all DNS queries to AdGuard Home on localhost and disab
 3. Create admin account with strong password
 4. After setup, you can also access via Traefik: `http://adguard.local` (requires DNS rewrite configuration below)
 
-**Configure DNS Filtering:**
-- Set router/devices to use `<homelab-ip>:53` as DNS server
-- All DNS queries will be filtered through AdGuard
-
 **Configure UniFi Network to use AdGuard Home:**
-1. Open UniFi Network Console
-2. Go to **Settings** → **Internet**
-3. Select your WAN connection
-4. Under **DNS Server**, set **Primary Server** to `<homelab-ip>`
-5. Set **Secondary Server** to `86.54.11.13` (DNS4EU fallback)
-6. Click **Apply Changes**
 
-This ensures all devices on your network use AdGuard Home for DNS resolution without manual configuration on each device.
+There are two DNS settings in UniFi - configure both for full coverage:
+
+| Setting | Location | Purpose |
+|---------|----------|---------|
+| **Per-Network DNS** | Networks → DHCP | Pushed to client devices via DHCP |
+| **WAN DNS** | Internet → WAN | Used by router itself |
+
+**Option 1: Per-Network DNS (recommended - affects client devices)**
+1. Go to **Settings** → **Networks** → select your network
+2. Scroll to **DHCP** section
+3. Uncheck **Auto DNS Server**
+4. Enter `<homelab-ip>` and click **Add**
+5. Repeat for each network/VLAN
+
+**Option 2: WAN DNS (affects router's own lookups)**
+1. Go to **Settings** → **Internet** → select your WAN connection
+2. Uncheck **Auto DNS Server**
+3. Set **Primary Server** to `<homelab-ip>`
+4. Set **Secondary Server** to `86.54.11.13` (DNS4EU fallback)
+
+Configure Option 1 to ensure all DHCP clients use AdGuard. Option 2 is supplementary for the router itself.
+
+**Note on Guest Network:** Keep **Auto DNS Server** checked for Guest networks. The router proxies DNS queries to AdGuard, so filtering still works. This is preferred because the AdGuard server is not accessible from the Guest network (network isolation), and guests won't see your internal server IP.
 
 **DNS Rewrites for Internal Services (Important for Traefik Routing):**
 
