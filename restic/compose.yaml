@@ -1,0 +1,76 @@
+services:
+  # Backup service configurations
+  restic-configs:
+    image: mazzolino/restic:latest
+    container_name: restic-configs
+    restart: unless-stopped
+    hostname: homelab
+    environment:
+      # Using separate env vars for REST credentials (avoids credentials in logs)
+      RESTIC_REPOSITORY: rest:http://${RESTIC_REST_HOST}:${RESTIC_REST_PORT}/homelab-configs
+      RESTIC_PASSWORD: ${RESTIC_PASSWORD}
+      RESTIC_REST_USERNAME: ${RESTIC_REST_USERNAME}
+      RESTIC_REST_PASSWORD: ${RESTIC_REST_PASSWORD}
+      # Backup daily at 2:00 AM (go-cron format: seconds minutes hours day month weekday)
+      BACKUP_CRON: "0 0 2 * * *"
+      # Only backup essential configs and app backups
+      RESTIC_BACKUP_SOURCES: /data
+      RESTIC_BACKUP_ARGS: --verbose
+      # Prune after each backup (RESTIC_FORGET_ARGS triggers automatic forget+prune)
+      RESTIC_FORGET_ARGS: >-
+        --group-by host,paths
+        --keep-daily 7
+        --keep-weekly 4
+        --keep-monthly 12
+        --prune
+      TZ: ${TZ}
+    volumes:
+      # AdGuard - config
+      - ../adguard/conf:/data/adguard:ro
+      # Arr stack - configs and app backups
+      - ../arr/jellyfin/config:/data/arr/jellyfin/config:ro
+      - ../arr/jellyfin/plugins:/data/arr/jellyfin/plugins:ro
+      - ../arr/sonarr/config.xml:/data/arr/sonarr/config.xml:ro
+      - ../arr/sonarr/Backups:/data/arr/sonarr/Backups:ro
+      - ../arr/radarr/config.xml:/data/arr/radarr/config.xml:ro
+      - ../arr/radarr/Backups:/data/arr/radarr/Backups:ro
+      - ../arr/prowlarr/config.xml:/data/arr/prowlarr/config.xml:ro
+      - ../arr/prowlarr/Backups:/data/arr/prowlarr/Backups:ro
+      - ../arr/bazarr/config:/data/arr/bazarr/config:ro
+      - ../arr/bazarr/backup:/data/arr/bazarr/backup:ro
+      - ../arr/qbittorrent/qBittorrent/qBittorrent.conf:/data/arr/qbittorrent/qBittorrent.conf:ro
+      - ../arr/homarr/configs:/data/arr/homarr/configs:ro
+    security_opt:
+      - no-new-privileges:true
+
+  # Backup Immich library
+  restic-immich:
+    image: mazzolino/restic:latest
+    container_name: restic-immich
+    restart: unless-stopped
+    hostname: homelab
+    environment:
+      # Using separate env vars for REST credentials (avoids credentials in logs)
+      RESTIC_REPOSITORY: rest:http://${RESTIC_REST_HOST}:${RESTIC_REST_PORT}/homelab-immich
+      RESTIC_PASSWORD: ${RESTIC_PASSWORD}
+      RESTIC_REST_USERNAME: ${RESTIC_REST_USERNAME}
+      RESTIC_REST_PASSWORD: ${RESTIC_REST_PASSWORD}
+      # Backup daily at 3:00 AM
+      BACKUP_CRON: "0 0 3 * * *"
+      RESTIC_BACKUP_SOURCES: /data/library
+      RESTIC_BACKUP_ARGS: >-
+        --exclude="postgres"
+        --verbose
+      # Prune after each backup (RESTIC_FORGET_ARGS triggers automatic forget+prune)
+      RESTIC_FORGET_ARGS: >-
+        --group-by host,paths
+        --keep-daily 7
+        --keep-weekly 4
+        --keep-monthly 12
+        --keep-yearly 5
+        --prune
+      TZ: ${TZ}
+    volumes:
+      - ../immich/library:/data/library:ro
+    security_opt:
+      - no-new-privileges:true

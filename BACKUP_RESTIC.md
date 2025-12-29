@@ -32,9 +32,10 @@ Homelab Server (Ubuntu)                    Synology NAS (DSM 7.1)
 
 ### Repository 1: Service Configurations
 
-- Traefik, arr stack, AdGuard, Cloudflare Tunnel configs
-- Small/medium size, quick to backup
-- **Excludes:** Media files (`arr/data/media/`, `arr/data/torrents/`)
+- AdGuard config, arr stack configs and app backups
+- Small size (~few MB), quick to backup
+- **Includes only:** Config files (`.xml`, `.yaml`, `.conf`) and app-created Backups folders
+- Regenerable data (SSL certs, metadata, databases) excluded - apps restore from their Backups
 
 ### Repository 2: Immich Library
 
@@ -155,158 +156,34 @@ Web Station is required to expose the Docker container's port externally.
 
 ## Part 2: Homelab Server Setup (Restic Client)
 
-This setup uses Docker Compose with the [Resticker](https://github.com/djmaze/resticker) image (`mazzolino/restic`), which includes built-in scheduling via go-cron.
+The Restic client is integrated into the main homelab Docker Compose setup using [Resticker](https://github.com/djmaze/resticker) (`mazzolino/restic`), which includes built-in scheduling via go-cron.
 
-### 1. Create Directory Structure
+**Configuration:** See [restic/compose.yaml](restic/compose.yaml) for the Docker Compose configuration.
 
-```bash
-mkdir -p ~/docker/restic
-cd ~/docker/restic
-```
+### 1. Configure Environment Variables
 
-### 2. Create Environment File
+Add the following to your `.env` file (see [.env.example](.env.example)):
 
-Create `~/docker/restic/.env` with your credentials:
+| Variable               | Description                        |
+|------------------------|------------------------------------|
+| `RESTIC_REST_HOST`     | REST server IP/hostname            |
+| `RESTIC_REST_PORT`     | REST server port (default: `8000`) |
+| `RESTIC_PASSWORD`      | Repository encryption password     |
+| `RESTIC_REST_USERNAME` | REST server username               |
+| `RESTIC_REST_PASSWORD` | REST server password               |
 
-```bash
-cat > ~/docker/restic/.env << 'EOF'
-# Restic repository password (encryption key)
-# Generate with: openssl rand -base64 32
-RESTIC_PASSWORD=<your-repository-password>
+**Critical:** Back up your `RESTIC_PASSWORD` securely. It is required to decrypt your backups. Store it in a password manager like 1Password.
 
-# Rest-server credentials
-RESTIC_REST_USERNAME=homelab
-RESTIC_REST_PASSWORD=<your-rest-server-password>
+### 2. Start Backup Containers
 
-# Synology NAS IP
-SYNOLOGY_IP=<synology-ip>
-EOF
-
-# Secure the file
-chmod 600 ~/docker/restic/.env
-```
-
-**Critical:** Back up this file securely. The `RESTIC_PASSWORD` is required to decrypt your backups. Store it in a password manager like 1Password.
-
-### 3. Create Docker Compose File
-
-Create `~/docker/restic/compose.yaml`:
-
-```yaml
-services:
-  # Backup service configurations
-  restic-configs:
-    image: mazzolino/restic:latest
-    container_name: restic-configs
-    restart: unless-stopped
-    hostname: homelab
-    environment:
-      # Using separate env vars for REST credentials (avoids credentials in logs)
-      RESTIC_REPOSITORY: rest:http://${SYNOLOGY_IP}:8000/homelab-configs
-      RESTIC_PASSWORD: ${RESTIC_PASSWORD}
-      RESTIC_REST_USERNAME: ${RESTIC_REST_USERNAME}
-      RESTIC_REST_PASSWORD: ${RESTIC_REST_PASSWORD}
-      # Backup daily at 2:00 AM (go-cron format: seconds minutes hours day month weekday)
-      BACKUP_CRON: "0 0 2 * * *"
-      RESTIC_BACKUP_SOURCES: /data/traefik /data/arr /data/adguard /data/cloudflare-tunnel /data/dashdot
-      RESTIC_BACKUP_ARGS: >-
-        --exclude="arr/data/media"
-        --exclude="arr/data/torrents"
-        --exclude="arr/data/cache"
-        --verbose
-      # Prune weekly on Sundays at 2:30 AM
-      PRUNE_CRON: "0 30 2 * * 0"
-      RESTIC_FORGET_ARGS: >-
-        --group-by host,paths
-        --keep-daily 7
-        --keep-weekly 4
-        --keep-monthly 12
-      # Check repository monthly on 1st at 4:00 AM
-      CHECK_CRON: "0 0 4 1 * *"
-      TZ: Europe/Prague
-    volumes:
-      - ~/docker/traefik:/data/traefik:ro
-      - ~/docker/arr:/data/arr:ro
-      - ~/docker/adguard:/data/adguard:ro
-      - ~/docker/cloudflare-tunnel:/data/cloudflare-tunnel:ro
-      - ~/docker/dashdot:/data/dashdot:ro
-    security_opt:
-      - no-new-privileges:true
-
-  # Backup Immich library
-  restic-immich:
-    image: mazzolino/restic:latest
-    container_name: restic-immich
-    restart: unless-stopped
-    hostname: homelab
-    environment:
-      # Using separate env vars for REST credentials (avoids credentials in logs)
-      RESTIC_REPOSITORY: rest:http://${SYNOLOGY_IP}:8000/homelab-immich
-      RESTIC_PASSWORD: ${RESTIC_PASSWORD}
-      RESTIC_REST_USERNAME: ${RESTIC_REST_USERNAME}
-      RESTIC_REST_PASSWORD: ${RESTIC_REST_PASSWORD}
-      # Backup daily at 3:00 AM
-      BACKUP_CRON: "0 0 3 * * *"
-      RESTIC_BACKUP_SOURCES: /data/library
-      RESTIC_BACKUP_ARGS: >-
-        --exclude="postgres"
-        --verbose
-      # Prune weekly on Sundays at 3:30 AM
-      PRUNE_CRON: "0 30 3 * * 0"
-      RESTIC_FORGET_ARGS: >-
-        --group-by host,paths
-        --keep-daily 7
-        --keep-weekly 4
-        --keep-monthly 12
-        --keep-yearly 5
-      # Check repository monthly on 1st at 5:00 AM
-      CHECK_CRON: "0 0 5 1 * *"
-      TZ: Europe/Prague
-    volumes:
-      - ~/docker/immich/library:/data/library:ro
-    security_opt:
-      - no-new-privileges:true
-```
-
-### 4. Initialize Repositories
-
-Before starting the containers, initialize the repositories:
+Repositories are automatically initialized on first run if they don't exist.
 
 ```bash
-cd ~/docker/restic
-
-# Load environment variables
-set -a && source .env && set +a
-
-# Initialize service configs repository
-docker run --rm \
-  -e RESTIC_REPOSITORY="rest:http://${SYNOLOGY_IP}:8000/homelab-configs" \
-  -e RESTIC_PASSWORD="${RESTIC_PASSWORD}" \
-  -e RESTIC_REST_USERNAME="${RESTIC_REST_USERNAME}" \
-  -e RESTIC_REST_PASSWORD="${RESTIC_REST_PASSWORD}" \
-  restic/restic init \
-  && echo "✓ homelab-configs repository initialized successfully" \
-  || echo "✗ Failed to initialize homelab-configs repository"
-
-# Initialize Immich repository
-docker run --rm \
-  -e RESTIC_REPOSITORY="rest:http://${SYNOLOGY_IP}:8000/homelab-immich" \
-  -e RESTIC_PASSWORD="${RESTIC_PASSWORD}" \
-  -e RESTIC_REST_USERNAME="${RESTIC_REST_USERNAME}" \
-  -e RESTIC_REST_PASSWORD="${RESTIC_REST_PASSWORD}" \
-  restic/restic init \
-  && echo "✓ homelab-immich repository initialized successfully" \
-  || echo "✗ Failed to initialize homelab-immich repository"
+cd ~/docker
+docker compose up -d restic-configs restic-immich
 ```
 
-### 5. Start Backup Containers
-
-```bash
-cd ~/docker/restic
-docker compose up -d
-```
-
-### 6. Test Backups Manually
+### 3. Test Backups Manually
 
 Trigger a manual backup:
 
@@ -318,26 +195,17 @@ docker exec restic-configs /usr/local/bin/backup
 docker exec restic-immich /usr/local/bin/backup
 ```
 
-### 7. View Snapshots
+### 4. View Snapshots
 
 ```bash
-cd ~/docker/restic
-set -a && source .env && set +a
-
 # List config snapshots
-docker run --rm \
-  -e RESTIC_REPOSITORY="rest:http://${RESTIC_REST_USERNAME}:${RESTIC_REST_PASSWORD}@${SYNOLOGY_IP}:8000/homelab-configs" \
-  -e RESTIC_PASSWORD="${RESTIC_PASSWORD}" \
-  restic/restic snapshots
+docker exec restic-configs restic snapshots
 
 # List Immich snapshots
-docker run --rm \
-  -e RESTIC_REPOSITORY="rest:http://${RESTIC_REST_USERNAME}:${RESTIC_REST_PASSWORD}@${SYNOLOGY_IP}:8000/homelab-immich" \
-  -e RESTIC_PASSWORD="${RESTIC_PASSWORD}" \
-  restic/restic snapshots
+docker exec restic-immich restic snapshots
 ```
 
-### 8. View Backup Logs
+### 5. View Backup Logs
 
 ```bash
 # View configs backup logs
@@ -352,54 +220,37 @@ docker logs -f restic-configs
 
 ## Restore Procedures
 
-All restore commands use the official `restic/restic` Docker image. First, load the environment variables:
-
-```bash
-cd ~/docker/restic
-set -a && source .env && set +a
-```
-
 ### List Available Snapshots
 
 ```bash
 # List config snapshots
-docker run --rm \
-  -e RESTIC_REPOSITORY="rest:http://${RESTIC_REST_USERNAME}:${RESTIC_REST_PASSWORD}@${SYNOLOGY_IP}:8000/homelab-configs" \
-  -e RESTIC_PASSWORD="${RESTIC_PASSWORD}" \
-  restic/restic snapshots
+docker exec restic-configs restic snapshots
 
 # List Immich snapshots
-docker run --rm \
-  -e RESTIC_REPOSITORY="rest:http://${RESTIC_REST_USERNAME}:${RESTIC_REST_PASSWORD}@${SYNOLOGY_IP}:8000/homelab-immich" \
-  -e RESTIC_PASSWORD="${RESTIC_PASSWORD}" \
-  restic/restic snapshots
+docker exec restic-immich restic snapshots
 
 # List files in a snapshot
-docker run --rm \
-  -e RESTIC_REPOSITORY="rest:http://${RESTIC_REST_USERNAME}:${RESTIC_REST_PASSWORD}@${SYNOLOGY_IP}:8000/homelab-configs" \
-  -e RESTIC_PASSWORD="${RESTIC_PASSWORD}" \
-  restic/restic ls <snapshot-id>
+docker exec restic-configs restic ls <snapshot-id>
 ```
 
 ### Restore Service Configurations
 
 ```bash
+cd ~/docker
+
 # Stop affected services
-cd ~/docker/<service>
-docker compose stop
+docker compose stop <service>
 
 # Restore entire snapshot to a staging directory
 mkdir -p ~/restore-staging
-docker run --rm \
-  -e RESTIC_REPOSITORY="rest:http://${RESTIC_REST_USERNAME}:${RESTIC_REST_PASSWORD}@${SYNOLOGY_IP}:8000/homelab-configs" \
-  -e RESTIC_PASSWORD="${RESTIC_PASSWORD}" \
+docker run --rm --env-file .env \
+  -e RESTIC_REPOSITORY="rest:http://${RESTIC_REST_HOST}:${RESTIC_REST_PORT}/homelab-configs" \
   -v ~/restore-staging:/restore \
   restic/restic restore <snapshot-id> --target /restore
 
 # Or restore specific files/directories
-docker run --rm \
-  -e RESTIC_REPOSITORY="rest:http://${RESTIC_REST_USERNAME}:${RESTIC_REST_PASSWORD}@${SYNOLOGY_IP}:8000/homelab-configs" \
-  -e RESTIC_PASSWORD="${RESTIC_PASSWORD}" \
+docker run --rm --env-file .env \
+  -e RESTIC_REPOSITORY="rest:http://${RESTIC_REST_HOST}:${RESTIC_REST_PORT}/homelab-configs" \
   -v ~/restore-staging:/restore \
   restic/restic restore <snapshot-id> \
     --target /restore \
@@ -409,7 +260,7 @@ docker run --rm \
 sudo cp -r ~/restore-staging/data/<service>/* ~/docker/<service>/
 
 # Start services
-docker compose start
+docker compose start <service>
 
 # Cleanup
 rm -rf ~/restore-staging
@@ -420,21 +271,19 @@ rm -rf ~/restore-staging
 1. **Stop Immich services:**
 
    ```bash
-   cd ~/docker/immich
-   docker compose down
+   cd ~/docker
+   docker compose down immich-server immich-machine-learning database
    ```
 
 2. **Restore library from Restic:**
 
    ```bash
-   cd ~/docker/restic
-   set -a && source .env && set +a
+   cd ~/docker
 
    # Restore to staging directory
    mkdir -p ~/restore-staging
-   docker run --rm \
-     -e RESTIC_REPOSITORY="rest:http://${RESTIC_REST_USERNAME}:${RESTIC_REST_PASSWORD}@${SYNOLOGY_IP}:8000/homelab-immich" \
-     -e RESTIC_PASSWORD="${RESTIC_PASSWORD}" \
+   docker run --rm --env-file .env \
+     -e RESTIC_REPOSITORY="rest:http://${RESTIC_REST_HOST}:${RESTIC_REST_PORT}/homelab-immich" \
      -v ~/restore-staging:/restore \
      restic/restic restore latest --target /restore
 
@@ -445,7 +294,7 @@ rm -rf ~/restore-staging
 3. **Restore database from SQL dump:**
 
    ```bash
-   cd ~/docker/immich
+   cd ~/docker
 
    # Start only PostgreSQL
    docker compose up -d database
@@ -471,20 +320,15 @@ rm -rf ~/restore-staging
 ### Restore Single File
 
 ```bash
-cd ~/docker/restic
-set -a && source .env && set +a
+cd ~/docker
 
 # Find the file in snapshots
-docker run --rm \
-  -e RESTIC_REPOSITORY="rest:http://${RESTIC_REST_USERNAME}:${RESTIC_REST_PASSWORD}@${SYNOLOGY_IP}:8000/homelab-configs" \
-  -e RESTIC_PASSWORD="${RESTIC_PASSWORD}" \
-  restic/restic find "*AdGuardHome.yaml*"
+docker exec restic-configs restic find "*AdGuardHome.yaml*"
 
 # Restore specific file
 mkdir -p ~/restore-staging
-docker run --rm \
-  -e RESTIC_REPOSITORY="rest:http://${RESTIC_REST_USERNAME}:${RESTIC_REST_PASSWORD}@${SYNOLOGY_IP}:8000/homelab-configs" \
-  -e RESTIC_PASSWORD="${RESTIC_PASSWORD}" \
+docker run --rm --env-file .env \
+  -e RESTIC_REPOSITORY="rest:http://${RESTIC_REST_HOST}:${RESTIC_REST_PORT}/homelab-configs" \
   -v ~/restore-staging:/restore \
   restic/restic restore <snapshot-id> \
     --target /restore \
@@ -493,79 +337,51 @@ docker run --rm \
 
 ## Maintenance
 
-First, load the environment variables:
-
-```bash
-cd ~/docker/restic
-set -a && source .env && set +a
-```
-
 ### Check Repository Health
 
 ```bash
 # Quick check (verify structure)
-docker run --rm \
-  -e RESTIC_REPOSITORY="rest:http://${RESTIC_REST_USERNAME}:${RESTIC_REST_PASSWORD}@${SYNOLOGY_IP}:8000/homelab-configs" \
-  -e RESTIC_PASSWORD="${RESTIC_PASSWORD}" \
-  restic/restic check
+docker exec restic-configs restic check
 
 # Full check (verify all data, slower)
-docker run --rm \
-  -e RESTIC_REPOSITORY="rest:http://${RESTIC_REST_USERNAME}:${RESTIC_REST_PASSWORD}@${SYNOLOGY_IP}:8000/homelab-configs" \
-  -e RESTIC_PASSWORD="${RESTIC_PASSWORD}" \
-  restic/restic check --read-data
+docker exec restic-configs restic check --read-data
 ```
 
 ### View Repository Statistics
 
 ```bash
 # Repository stats
-docker run --rm \
-  -e RESTIC_REPOSITORY="rest:http://${RESTIC_REST_USERNAME}:${RESTIC_REST_PASSWORD}@${SYNOLOGY_IP}:8000/homelab-configs" \
-  -e RESTIC_PASSWORD="${RESTIC_PASSWORD}" \
-  restic/restic stats
+docker exec restic-configs restic stats
 
 # Detailed stats by snapshot
-docker run --rm \
-  -e RESTIC_REPOSITORY="rest:http://${RESTIC_REST_USERNAME}:${RESTIC_REST_PASSWORD}@${SYNOLOGY_IP}:8000/homelab-configs" \
-  -e RESTIC_PASSWORD="${RESTIC_PASSWORD}" \
-  restic/restic stats --mode raw-data
+docker exec restic-configs restic stats --mode raw-data
 ```
 
 ### Manual Snapshot Pruning
 
+Pruning is done automatically after each backup. To run manually:
+
 ```bash
 # Dry-run to see what would be deleted
-docker run --rm \
-  -e RESTIC_REPOSITORY="rest:http://${RESTIC_REST_USERNAME}:${RESTIC_REST_PASSWORD}@${SYNOLOGY_IP}:8000/homelab-configs" \
-  -e RESTIC_PASSWORD="${RESTIC_PASSWORD}" \
-  restic/restic forget \
-    --keep-daily 7 \
-    --keep-weekly 4 \
-    --keep-monthly 12 \
-    --dry-run
+docker exec restic-configs restic forget \
+  --keep-daily 7 --keep-weekly 4 --keep-monthly 12 --dry-run
 
 # Execute pruning
-docker run --rm \
-  -e RESTIC_REPOSITORY="rest:http://${RESTIC_REST_USERNAME}:${RESTIC_REST_PASSWORD}@${SYNOLOGY_IP}:8000/homelab-configs" \
-  -e RESTIC_PASSWORD="${RESTIC_PASSWORD}" \
-  restic/restic forget \
-    --keep-daily 7 \
-    --keep-weekly 4 \
-    --keep-monthly 12 \
-    --prune
+docker exec restic-configs restic forget \
+  --keep-daily 7 --keep-weekly 4 --keep-monthly 12 --prune
 ```
 
 ### Update Restic
 
 ```bash
+cd ~/docker
+
 # Pull latest images
 docker pull mazzolino/restic:latest
 docker pull restic/restic:latest
 
 # Restart backup containers to use new image
-cd ~/docker/restic
-docker compose up -d
+docker compose up -d restic-configs restic-immich
 ```
 
 ## Troubleshooting
@@ -596,12 +412,12 @@ If you can't connect to rest-server:
 
 ### Authentication Failed
 
-1. Verify credentials in `~/docker/restic/.env`
+1. Verify credentials in `~/docker/.env`
 
 2. Test with curl:
 
    ```bash
-   curl -u homelab http://<synology-ip>:8000/
+   curl -u homelab http://<rest-server-ip>:8000/
    ```
 
 3. Recreate user if needed:
@@ -617,20 +433,11 @@ If you can't connect to rest-server:
 If a backup was interrupted:
 
 ```bash
-cd ~/docker/restic
-set -a && source .env && set +a
-
 # List locks
-docker run --rm \
-  -e RESTIC_REPOSITORY="rest:http://${RESTIC_REST_USERNAME}:${RESTIC_REST_PASSWORD}@${SYNOLOGY_IP}:8000/homelab-configs" \
-  -e RESTIC_PASSWORD="${RESTIC_PASSWORD}" \
-  restic/restic list locks
+docker exec restic-configs restic list locks
 
 # Remove stale locks (use with caution)
-docker run --rm \
-  -e RESTIC_REPOSITORY="rest:http://${RESTIC_REST_USERNAME}:${RESTIC_REST_PASSWORD}@${SYNOLOGY_IP}:8000/homelab-configs" \
-  -e RESTIC_PASSWORD="${RESTIC_PASSWORD}" \
-  restic/restic unlock
+docker exec restic-configs restic unlock
 ```
 
 ### Slow Backups
@@ -652,16 +459,15 @@ docker run --rm \
 Periodically verify backups can be restored:
 
 ```bash
-cd ~/docker/restic
-set -a && source .env && set +a
+cd ~/docker
 
 # Mount repository and browse (requires FUSE on host)
 mkdir -p /tmp/restic-mount
 docker run --rm -it \
   --device /dev/fuse \
   --cap-add SYS_ADMIN \
-  -e RESTIC_REPOSITORY="rest:http://${RESTIC_REST_USERNAME}:${RESTIC_REST_PASSWORD}@${SYNOLOGY_IP}:8000/homelab-configs" \
-  -e RESTIC_PASSWORD="${RESTIC_PASSWORD}" \
+  --env-file .env \
+  -e RESTIC_REPOSITORY="rest:http://${RESTIC_REST_HOST}:${RESTIC_REST_PORT}/homelab-configs" \
   -v /tmp/restic-mount:/mnt/restic:shared \
   restic/restic mount /mnt/restic
 
@@ -672,7 +478,7 @@ ls /tmp/restic-mount/snapshots/
 fusermount -u /tmp/restic-mount
 ```
 
-**Alternative:** Use `restic ls` or restore to a staging directory instead of mounting.
+**Alternative:** Use `docker exec restic-configs restic ls latest` or restore to a staging directory instead of mounting.
 
 ## Security Considerations
 
@@ -682,7 +488,7 @@ fusermount -u /tmp/restic-mount
 
 3. **Append-only mode:** Enable `--append-only` in rest-server for ransomware protection (clients cannot delete backups)
 
-4. **Credential storage:** Keep `~/docker/restic/.env` secure (600 permissions) and backed up separately
+4. **Credential storage:** Keep `~/docker/.env` secure (600 permissions) and backed up separately
 
 5. **Read-only mounts:** Backup containers mount source directories as read-only (`:ro`) to prevent accidental modifications
 

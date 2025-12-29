@@ -19,6 +19,7 @@ Docker Compose setup for media management, photo storage, DNS filtering, and ext
 | **qBittorrent** | Download client | `http://localhost:8080` (VPN) | vpn-isolated (via Gluetun) |
 | **Gluetun** | VPN gateway | Internal only | vpn-isolated, services |
 | **Cloudflare Tunnel** | External routing | Routes to Traefik | ingress |
+| **Restic** | Automated backups | Scheduled (2-3 AM) | - |
 
 ## Architecture
 
@@ -87,7 +88,8 @@ docker/
 │   ├── acme/               # Let's Encrypt certificates
 │   └── config/             # Traefik configuration
 ├── cloudflare-tunnel/      # Cloudflare Tunnel credentials
-└── dashdot/                # Dashdot configuration
+├── dashdot/                # Dashdot configuration
+└── restic/                 # Restic backup configuration
 ```
 
 **Note:** This setup uses local repository directories for portability. All paths are relative to the repository root.
@@ -246,6 +248,10 @@ vi immich/.env
 | `CLOUDFLARE_TUNNEL_TOKEN` | Cloudflare Tunnel token |
 | `OPENVPN_USER` / `OPENVPN_PASSWORD` | NordVPN service credentials |
 | `SERVER_COUNTRIES` | VPN server location |
+| `RESTIC_REST_HOST` | REST server IP/hostname |
+| `RESTIC_REST_PORT` | REST server port (default: `8000`) |
+| `RESTIC_PASSWORD` | Repository encryption password |
+| `RESTIC_REST_USERNAME` / `RESTIC_REST_PASSWORD` | REST server credentials |
 
 **Immich `immich/.env` file** - dedicated configuration for Immich (follows official Immich setup pattern):
 
@@ -589,9 +595,34 @@ docker compose down -v
 
 ## Backup
 
-Two backup solutions are documented:
+### Integrated Restic Backup
 
-- **[BACKUP_RESTIC.md](BACKUP_RESTIC.md)** - Restic with rest-server on Synology NAS (Docker). Client-side encryption, deduplication, REST API.
+Automated backups run via Docker containers with built-in scheduling:
+
+| Repository         | Schedule       | Contents                                                         |
+|--------------------|----------------|------------------------------------------------------------------|
+| `homelab-configs`  | Daily 2:00 AM  | AdGuard config, arr stack configs and app Backups                |
+| `homelab-immich`   | Daily 3:00 AM  | Immich photos, videos, and database dumps                        |
+
+Repositories are automatically initialized on first run.
+
+**Trigger manual backup:**
+
+```bash
+docker exec restic-configs /usr/local/bin/backup
+docker exec restic-immich /usr/local/bin/backup
+```
+
+**View backup logs:**
+
+```bash
+docker logs restic-configs
+docker logs restic-immich
+```
+
+### Backup Documentation
+
+- **[BACKUP_RESTIC.md](BACKUP_RESTIC.md)** - Full Restic setup guide including REST server on Synology NAS, restore procedures, and maintenance.
 - **[BACKUP_SYNOLOGY_ABB.md](BACKUP_SYNOLOGY_ABB.md)** - Synology Active Backup for Business with rsync over SSH. GUI-based, native Synology integration.
 
 ## Restore from Backup
