@@ -55,7 +55,7 @@ services:
       RESTIC_PASSWORD: ${RESTIC_PASSWORD}
       RESTIC_REST_USERNAME: ${RESTIC_REST_USERNAME}
       RESTIC_REST_PASSWORD: ${RESTIC_REST_PASSWORD}
-      # Backup daily at 3:00 AM
+      # Backup daily at 3:00 AM (after Immich DB backup completes at 2:00 AM)
       BACKUP_CRON: "0 0 3 * * *"
       RESTIC_BACKUP_SOURCES: /data/library
       RESTIC_BACKUP_ARGS: >-

@@ -18,12 +18,13 @@ Using rest-server over REST API is preferred over mounting a CIFS/SMB share beca
 Homelab Server (Ubuntu)                    Synology NAS (DSM 7.1)
 ┌─────────────────────────────────────┐    ┌─────────────────────────────────┐
 │                                     │    │                                 │
-│  Restic Client                      │    │  Docker                         │
-│  ├── Service configs backup    ─────────►│  └── rest-server (:8000)        │
-│  └── Immich library backup     ─────────►│      └── /data/restic-repos/    │
-│                                     │    │          ├── homelab-configs/   │
-│  Cron / Systemd Timer               │    │          └── homelab-immich/    │
-│  └── Scheduled backups              │    │                                 │
+│  Docker (Resticker)                 │    │  Docker                         │
+│  ├── restic-configs                 │    │  └── rest-server (:8000)        │
+│  │   └── AdGuard, arr stack configs─────►│      └── /data/repos/           │
+│  │                                  │    │          ├── homelab-configs/   │
+│  └── restic-immich                  │    │          │                      │
+│      └── Immich library        ─────────►│          └── homelab-immich/    │
+│                                     │    │                                 │
 │                                     │    │  Volume: /volume1/docker/restic │
 └─────────────────────────────────────┘    └─────────────────────────────────┘
 ```
@@ -32,6 +33,7 @@ Homelab Server (Ubuntu)                    Synology NAS (DSM 7.1)
 
 ### Repository 1: Service Configurations
 
+- **Schedule:** Daily at 2:00 AM
 - AdGuard config, arr stack configs and app backups
 - Small size (~few MB), quick to backup
 - **Includes only:** Config files (`.xml`, `.yaml`, `.conf`) and app-created Backups folders
@@ -39,9 +41,11 @@ Homelab Server (Ubuntu)                    Synology NAS (DSM 7.1)
 
 ### Repository 2: Immich Library
 
+- **Schedule:** Daily at 3:00 AM (after Immich DB backup completes at 2:00 AM)
 - Photos, videos, thumbnails, and database dumps
 - Large size, incremental backups essential
 - **Excludes:** PostgreSQL data directory (Immich dumps DB to library)
+- **Reference:** [Immich Backup and Restore Guide](https://docs.immich.app/administration/backup-and-restore/)
 
 ## Prerequisites
 
@@ -293,6 +297,8 @@ rm -rf ~/restore-staging
 
 3. **Restore database from SQL dump:**
 
+   > **Note:** Check the [Immich Backup and Restore Guide](https://docs.immich.app/administration/backup-and-restore/) for the latest restore procedure.
+
    ```bash
    cd ~/docker
 
@@ -439,46 +445,6 @@ docker exec restic-configs restic list locks
 # Remove stale locks (use with caution)
 docker exec restic-configs restic unlock
 ```
-
-### Slow Backups
-
-1. **Check network speed** between homelab and NAS
-
-2. **Increase parallelism** by adding to `RESTIC_BACKUP_ARGS` in `compose.yaml`:
-
-   ```yaml
-   RESTIC_BACKUP_ARGS: >-
-     --verbose
-     -o rest.connections=10
-   ```
-
-3. **Exclude unnecessary files** in `RESTIC_BACKUP_ARGS`
-
-### Backup Verification
-
-Periodically verify backups can be restored:
-
-```bash
-cd ~/docker
-
-# Mount repository and browse (requires FUSE on host)
-mkdir -p /tmp/restic-mount
-docker run --rm -it \
-  --device /dev/fuse \
-  --cap-add SYS_ADMIN \
-  --env-file .env \
-  -e RESTIC_REPOSITORY="rest:http://${RESTIC_REST_HOST}:${RESTIC_REST_PORT}/homelab-configs" \
-  -v /tmp/restic-mount:/mnt/restic:shared \
-  restic/restic mount /mnt/restic
-
-# Browse snapshots in another terminal
-ls /tmp/restic-mount/snapshots/
-
-# Unmount when done
-fusermount -u /tmp/restic-mount
-```
-
-**Alternative:** Use `docker exec restic-configs restic ls latest` or restore to a staging directory instead of mounting.
 
 ## Security Considerations
 
