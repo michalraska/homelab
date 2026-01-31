@@ -15,8 +15,6 @@ services:
       - TZ=${TZ}
     ports:
       - "8080:8080"
-      - "6881:6881/tcp"
-      - "6881:6881/udp"
     volumes:
       - ./gluetun:/gluetun
     networks:

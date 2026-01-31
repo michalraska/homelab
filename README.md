@@ -157,7 +157,28 @@ If properly configured, you'll see `Permission denied (publickey).` instead of a
 
 The configuration disables password authentication, root login, and enforces modern cryptographic algorithms. See [ssh/sshd_config](ssh/sshd_config) for details.
 
-### 2. Extend LVM to Use Full Disk (Ubuntu Server)
+### 2. Configure Firewall (Optional)
+
+Set up UFW firewall for defense in depth. The server is already protected by the router's NAT, but UFW adds an extra layer and documents expected open ports.
+
+See **[FIREWALL.md](FIREWALL.md)** for detailed instructions and testing guide.
+
+Quick setup:
+
+```bash
+sudo apt install ufw
+sudo ufw default deny incoming
+sudo ufw default allow outgoing
+sudo ufw limit 22/tcp    # SSH with rate limiting
+sudo ufw allow 53        # AdGuard DNS
+sudo ufw allow 80/tcp    # Traefik HTTP
+sudo ufw allow 443/tcp   # Traefik HTTPS
+sudo ufw allow 3000/tcp  # AdGuard UI
+sudo ufw allow 8080/tcp  # qBittorrent
+sudo ufw enable
+```
+
+### 3. Extend LVM to Use Full Disk (Ubuntu Server)
 
 Ubuntu Server with LVM often allocates only a portion of the disk by default. Check and extend if needed:
 
@@ -175,7 +196,7 @@ sudo resize2fs /dev/ubuntu-vg/ubuntu-lv
 df -h /
 ```
 
-### 3. Install Docker Engine (Ubuntu)
+### 4. Install Docker Engine (Ubuntu)
 
 Install Docker using the official APT repository (recommended for production):
 
@@ -211,14 +232,14 @@ docker --version
 docker compose version
 ```
 
-### 4. Clone the Repository
+### 5. Clone the Repository
 
 ```bash
 git clone git@github.com:michalraska/homelab.git ~/docker
 cd ~/docker
 ```
 
-### 5. Initial Configuration
+### 6. Initial Configuration
 
 ```bash
 # Copy root environment template
@@ -234,7 +255,7 @@ cp immich/.env.example immich/.env
 vi immich/.env
 ```
 
-### 6. Required Environment Variables
+### 7. Required Environment Variables
 
 **Root `.env` file** - shared configuration for most services:
 
@@ -263,7 +284,7 @@ vi immich/.env
 | `DB_PASSWORD` | PostgreSQL password (generate with `openssl rand -base64 32`) |
 | `IMMICH_VERSION` | Immich version tag (default: `release`) |
 
-### 7. Get NordVPN OpenVPN Credentials
+### 8. Get NordVPN OpenVPN Credentials
 
 1. Go to [NordVPN Dashboard](https://my.nordaccount.com/dashboard/)
 2. Navigate to **NordVPN** > **Manual setup** > **Service credentials**
@@ -271,7 +292,7 @@ vi immich/.env
 4. Copy username and password to `.env` as `OPENVPN_USER` and `OPENVPN_PASSWORD`
 5. Set `SERVER_COUNTRIES` to your preferred location (e.g., `Czech Republic`)
 
-### 8. Set Up Cloudflare for HTTPS (Let's Encrypt DNS Challenge)
+### 9. Set Up Cloudflare for HTTPS (Let's Encrypt DNS Challenge)
 
 Before setting up the tunnel, create a scoped API token for Let's Encrypt:
 
@@ -286,7 +307,7 @@ Before setting up the tunnel, create a scoped API token for Let's Encrypt:
 5. Copy the token to `.env` as `CLOUDFLARE_API_KEY`
 6. Also set `ACME_EMAIL` in `.env` to your email for Let's Encrypt notifications
 
-### 9. Set Up Cloudflare Tunnel
+### 10. Set Up Cloudflare Tunnel
 
 1. Go to [Cloudflare Zero Trust Dashboard](https://one.dash.cloudflare.com/)
 2. Navigate to **Networks** → **Connectors**
@@ -299,7 +320,7 @@ Before setting up the tunnel, create a scoped API token for Let's Encrypt:
    - `jellyfin.yourdomain.com` → `http://traefik:80`
    - `immich.yourdomain.com` → `http://traefik:80`
 
-### 10. Start Services
+### 11. Start Services
 
 ```bash
 # Validate compose file
@@ -508,6 +529,10 @@ Use AdGuard's **DNS rewrites** feature to resolve hostnames to your homelab IP:
 4. Cloudflare automatically routes to Traefik (no manual route config needed)
 
 ## Security Considerations
+
+### Firewall
+
+UFW firewall configuration is documented in **[FIREWALL.md](FIREWALL.md)**. The firewall provides defense in depth and SSH rate limiting for brute-force protection.
 
 ### Network Isolation
 - **ingress**: Traefik and Cloudflare Tunnel only (entry point for all external traffic)
