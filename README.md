@@ -178,7 +178,67 @@ sudo ufw allow 8080/tcp  # qBittorrent
 sudo ufw enable
 ```
 
-### 3. Extend LVM to Use Full Disk (Ubuntu Server)
+### 3. Enable Automatic Security Updates
+
+Configure `unattended-upgrades` to automatically install critical security patches. This keeps the server protected without manual intervention.
+
+```bash
+# Install unattended-upgrades (usually pre-installed on Ubuntu 24.04)
+sudo apt install unattended-upgrades
+
+# Enable automatic updates
+sudo dpkg-reconfigure -plow unattended-upgrades
+```
+
+Select **Yes** when prompted to enable automatic updates.
+
+**Verify the configuration:**
+
+```bash
+# Check that auto-updates are enabled
+cat /etc/apt/apt.conf.d/20auto-upgrades
+```
+
+Expected output:
+```
+APT::Periodic::Update-Package-Lists "1";
+APT::Periodic::Unattended-Upgrade "1";
+```
+
+**Enable automatic reboot for kernel updates:**
+
+Some security updates (kernel, systemd) require a reboot to take effect. Configure automatic reboot at a low-traffic time:
+
+```bash
+sudo sed -i 's|//Unattended-Upgrade::Automatic-Reboot "false";|Unattended-Upgrade::Automatic-Reboot "true";|' /etc/apt/apt.conf.d/50unattended-upgrades
+sudo sed -i 's|//Unattended-Upgrade::Automatic-Reboot-Time "02:00";|Unattended-Upgrade::Automatic-Reboot-Time "01:00";|' /etc/apt/apt.conf.d/50unattended-upgrades
+```
+
+**Note:** Reboot time is set to 1:00 AM — before Restic backups start (configs at 2:00 AM, Immich at 3:00 AM). This ensures the server is fully up before backups run, avoiding interruptions if a backup takes longer than expected. Docker containers restart automatically after reboot thanks to their `restart: unless-stopped` policy.
+
+**Verify the full configuration:**
+```bash
+sudo vi /etc/apt/apt.conf.d/50unattended-upgrades
+```
+
+Check that these lines are uncommented (no `//` prefix):
+
+- `Unattended-Upgrade::Allowed-Origins` block contains `"${distro_id}:${distro_codename}-security";`
+- `Unattended-Upgrade::Automatic-Reboot "true";`
+- `Unattended-Upgrade::Automatic-Reboot-Time "01:00";`
+
+**Dry run to verify everything works:**
+```bash
+sudo unattended-upgrades --dry-run --debug
+```
+
+**Check update history:**
+```bash
+# View past automatic updates
+cat /var/log/unattended-upgrades/unattended-upgrades.log
+```
+
+### 4. Extend LVM to Use Full Disk (Ubuntu Server)
 
 Ubuntu Server with LVM often allocates only a portion of the disk by default. Check and extend if needed:
 
@@ -196,7 +256,7 @@ sudo resize2fs /dev/ubuntu-vg/ubuntu-lv
 df -h /
 ```
 
-### 4. Install Docker Engine (Ubuntu)
+### 5. Install Docker Engine (Ubuntu)
 
 Install Docker using the official APT repository (recommended for production):
 
@@ -232,14 +292,14 @@ docker --version
 docker compose version
 ```
 
-### 5. Clone the Repository
+### 6. Clone the Repository
 
 ```bash
 git clone git@github.com:michalraska/homelab.git ~/docker
 cd ~/docker
 ```
 
-### 6. Initial Configuration
+### 7. Initial Configuration
 
 ```bash
 # Copy root environment template
@@ -255,7 +315,7 @@ cp immich/.env.example immich/.env
 vi immich/.env
 ```
 
-### 7. Required Environment Variables
+### 8. Required Environment Variables
 
 **Root `.env` file** - shared configuration for most services:
 
@@ -284,7 +344,7 @@ vi immich/.env
 | `DB_PASSWORD` | PostgreSQL password (generate with `openssl rand -base64 32`) |
 | `IMMICH_VERSION` | Immich version tag (default: `release`) |
 
-### 8. Get NordVPN OpenVPN Credentials
+### 9. Get NordVPN OpenVPN Credentials
 
 1. Go to [NordVPN Dashboard](https://my.nordaccount.com/dashboard/)
 2. Navigate to **NordVPN** > **Manual setup** > **Service credentials**
@@ -292,7 +352,7 @@ vi immich/.env
 4. Copy username and password to `.env` as `OPENVPN_USER` and `OPENVPN_PASSWORD`
 5. Set `SERVER_COUNTRIES` to your preferred location (e.g., `Czech Republic`)
 
-### 9. Set Up Cloudflare for HTTPS (Let's Encrypt DNS Challenge)
+### 10. Set Up Cloudflare for HTTPS (Let's Encrypt DNS Challenge)
 
 Before setting up the tunnel, create a scoped API token for Let's Encrypt:
 
@@ -307,7 +367,7 @@ Before setting up the tunnel, create a scoped API token for Let's Encrypt:
 5. Copy the token to `.env` as `CLOUDFLARE_API_KEY`
 6. Also set `ACME_EMAIL` in `.env` to your email for Let's Encrypt notifications
 
-### 10. Set Up Cloudflare Tunnel
+### 11. Set Up Cloudflare Tunnel
 
 1. Go to [Cloudflare Zero Trust Dashboard](https://one.dash.cloudflare.com/)
 2. Navigate to **Networks** → **Connectors**
@@ -320,7 +380,7 @@ Before setting up the tunnel, create a scoped API token for Let's Encrypt:
    - `jellyfin.yourdomain.com` → `http://traefik:80`
    - `immich.yourdomain.com` → `http://traefik:80`
 
-### 11. Start Services
+### 12. Start Services
 
 ```bash
 # Validate compose file
