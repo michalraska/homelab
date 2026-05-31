@@ -177,6 +177,7 @@ services:
     environment:
       - TZ=${TZ}
       - HOSTNAME=0.0.0.0
+      - DISABLE_UPGRADE_MODAL=true
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./homarr/configs:/app/data/configs
