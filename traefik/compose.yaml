@@ -27,6 +27,14 @@ services:
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
 
+      # Upload timeouts (large media via Immich) — Immich docs recommend 600s
+      - "--entrypoints.websecure.transport.respondingTimeouts.readTimeout=600s"
+      - "--entrypoints.websecure.transport.respondingTimeouts.writeTimeout=600s"
+      - "--entrypoints.websecure.transport.respondingTimeouts.idleTimeout=600s"
+      - "--entrypoints.web.transport.respondingTimeouts.readTimeout=600s"
+      - "--entrypoints.web.transport.respondingTimeouts.writeTimeout=600s"
+      - "--entrypoints.web.transport.respondingTimeouts.idleTimeout=600s"
+
       # API & Dashboard (routed via Host rule on port 80)
       - "--api.dashboard=true"
       - "--api.insecure=false"
