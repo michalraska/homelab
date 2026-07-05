@@ -19,6 +19,7 @@ When implementing changes to this homelab setup, use Context7 to fetch up-to-dat
 | AdGuard Home | `/adguardteam/adguardhome` |
 | Homarr | `/ajnart/homarr` |
 | Dashdot | `/MauriceNino/dashdot` |
+| Watchtower | `/containrrr/watchtower` |
 
 ## Usage
 

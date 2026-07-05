@@ -398,6 +398,12 @@ docker compose ps
 
 ## Post-Setup Configuration
 
+### Automatic Container Image Updates (Watchtower)
+
+Watchtower checks daily for new container images and auto-updates every service **except Immich and Traefik** (those notify only — update them manually). Set `WATCHTOWER_NOTIFICATION_URL` in `.env` to receive ntfy notifications of what changed.
+
+See **[WATCHTOWER.md](WATCHTOWER.md)** for the update policy, ntfy setup, and the manual update workflow for the excluded services.
+
 ### Configure systemd-resolved for AdGuard Home (Ubuntu Server)
 
 To use AdGuard Home as the primary DNS resolver on Ubuntu Server, configure systemd-resolved:

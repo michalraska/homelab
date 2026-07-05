@@ -42,6 +42,8 @@ services:
       - "traefik.http.routers.immich-secure.service=immich"
       # Service backend
       - "traefik.http.services.immich.loadbalancer.server.port=2283"
+      # Watchtower: notify only, never auto-update — Immich ships breaking DB migrations, update manually
+      - "com.centurylinklabs.watchtower.monitor-only=true"
 
   immich-machine-learning:
     container_name: immich_machine_learning
@@ -61,6 +63,9 @@ services:
       disable: false
     networks:
       - immich
+    labels:
+      # Watchtower: notify only, never auto-update — kept in lockstep with immich-server
+      - "com.centurylinklabs.watchtower.monitor-only=true"
 
   redis:
     container_name: immich_redis

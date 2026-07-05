@@ -25,3 +25,4 @@ include:
   - arr/compose.yaml
   - dashdot/compose.yaml
   - restic/compose.yaml
+  - watchtower/compose.yaml

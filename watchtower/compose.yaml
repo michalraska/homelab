@@ -1,0 +1,24 @@
+services:
+  # ==================== Automatic Image Updates (Watchtower) ====================
+  # Checks daily for new images and AUTO-UPDATES every container, EXCEPT those
+  # labeled `com.centurylinklabs.watchtower.monitor-only=true` (Immich, Traefik),
+  # which only trigger a notification. See WATCHTOWER.md for the full policy.
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: watchtower
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      - TZ=${TZ}
+      - WATCHTOWER_SCHEDULE=0 0 6 * * *        # daily at 06:00 (6-field cron: sec min hour dom mon dow)
+      - WATCHTOWER_CLEANUP=true                # prune old images after each update
+      - WATCHTOWER_ROLLING_RESTART=true        # update containers one at a time
+      - WATCHTOWER_NO_STARTUP_MESSAGE=true
+      - WATCHTOWER_NOTIFICATION_REPORT=true    # one consolidated report per run
+      - WATCHTOWER_NOTIFICATION_URL=${WATCHTOWER_NOTIFICATION_URL}
+    volumes:
+      # rw (no :ro) — Watchtower must pull images and recreate containers to update them
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - services
