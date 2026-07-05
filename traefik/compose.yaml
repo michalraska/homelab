@@ -63,5 +63,3 @@ services:
       - "traefik.http.services.api.loadbalancer.server.port=8080"
       - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
       - "traefik.http.middlewares.redirect-to-https.redirectscheme.permanent=true"
-      # Watchtower: notify only, never auto-update — stays pinned to v3.6 (critical ingress)
-      - "com.centurylinklabs.watchtower.monitor-only=true"

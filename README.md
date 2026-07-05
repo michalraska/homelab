@@ -398,11 +398,11 @@ docker compose ps
 
 ## Post-Setup Configuration
 
-### Automatic Container Image Updates (Watchtower)
+### Container Image Update Notifications (Diun)
 
-Watchtower checks daily for new container images and auto-updates every service **except Immich and Traefik** (those notify only — update them manually). Set `WATCHTOWER_NOTIFICATION_URL` in `.env` to receive ntfy notifications of what changed.
+[Diun](https://crazymax.dev/diun/) checks daily for new container images and sends an **ntfy notification** when an update is available. It never updates anything itself — you update each service manually (`docker compose pull <service> && docker compose up -d <service>`) once a release has proven stable.
 
-See **[WATCHTOWER.md](WATCHTOWER.md)** for the update policy, ntfy setup, and the manual update workflow for the excluded services.
+**Setup:** pick a long, random `DIUN_NTFY_TOPIC` in `.env` (public ntfy.sh topics are unauthenticated), subscribe to `https://ntfy.sh/<your-topic>` in the [ntfy app](https://ntfy.sh/app), then `docker compose up -d diun`. Diun watches all containers by default (silence one with a `diun.enable=false` label). After updating **gluetun**, also recreate qBittorrent (`docker compose up -d --force-recreate gluetun qbittorrent`) since they share a network namespace.
 
 ### Configure systemd-resolved for AdGuard Home (Ubuntu Server)
 

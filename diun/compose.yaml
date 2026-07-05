@@ -1,0 +1,32 @@
+services:
+  # ==================== Image Update Notifications (Diun) ====================
+  # Diun watches every running container's image and sends an ntfy notification
+  # when a newer image is published. It NEVER updates, pulls, or restarts
+  # anything — you update manually once a release has proven stable. See DIUN.md.
+  diun:
+    image: crazymax/diun:latest
+    container_name: diun
+    command: serve
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      - TZ=${TZ}
+      - LOG_LEVEL=info
+      - DIUN_WATCH_WORKERS=10
+      - DIUN_WATCH_SCHEDULE=0 6 * * *                  # daily at 06:00 (5-field cron)
+      - DIUN_WATCH_JITTER=30s
+      - DIUN_WATCH_FIRSTCHECKNOTIF=false               # don't notify for every existing image on first run
+      - DIUN_PROVIDERS_DOCKER=true
+      - DIUN_PROVIDERS_DOCKER_WATCHBYDEFAULT=true       # watch all containers (opt out per container with label diun.enable=false)
+      - DIUN_NOTIF_NTFY_ENDPOINT=${DIUN_NTFY_ENDPOINT:-https://ntfy.sh}
+      - DIUN_NOTIF_NTFY_TOPIC=${DIUN_NTFY_TOPIC}
+      - DIUN_NOTIF_NTFY_PRIORITY=3
+    volumes:
+      # Dedicated state dir — resolves to diun/data (holds only Diun's notify-tracking DB).
+      # NOT the shared media ./data used by the *arr apps; Diun has no access to that.
+      - ./data:/data
+      # Read-only socket — Diun only inspects containers, it never modifies anything.
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - services
