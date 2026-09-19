@@ -16,7 +16,7 @@ services:
       - DIUN_WATCH_WORKERS=10
       - DIUN_WATCH_SCHEDULE=0 6 * * *                  # daily at 06:00 (5-field cron)
       - DIUN_WATCH_JITTER=30s
-      - DIUN_WATCH_FIRSTCHECKNOTIF=false               # don't notify for every existing image on first run
+      - DIUN_WATCH_FIRSTCHECKNOTIF=true
       - DIUN_PROVIDERS_DOCKER=true
       - DIUN_PROVIDERS_DOCKER_WATCHBYDEFAULT=true       # watch all containers (opt out per container with label diun.enable=false)
       - DIUN_NOTIF_NTFY_ENDPOINT=${DIUN_NTFY_ENDPOINT:-https://ntfy.sh}
