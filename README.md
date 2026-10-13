@@ -102,7 +102,7 @@ docker/
 4. **Filesystem**: ext4 or similar supporting hardlinks for optimal *arr stack performance
 5. **Hardware**: Intel CPU with QuickSync support (optional, for Jellyfin hardware transcoding and Immich machine learning acceleration)
 6. **Cloudflare Account** with a domain
-7. **NordVPN Account** with OpenVPN service credentials
+7. **VPN Account** with an OpenVPN profile and OpenVPN credentials
 8. **User/Group IDs**: Know your PUID and PGID (typically 1000:1000)
 
 ## Setup Instructions
@@ -327,8 +327,7 @@ vi immich/.env
 | `ACME_EMAIL` | Email for Let's Encrypt notifications |
 | `CLOUDFLARE_API_KEY` | Cloudflare API token for DNS challenge |
 | `CLOUDFLARE_TUNNEL_TOKEN` | Cloudflare Tunnel token |
-| `OPENVPN_USER` / `OPENVPN_PASSWORD` | NordVPN service credentials |
-| `SERVER_COUNTRIES` | VPN server location |
+| `OPENVPN_USER` / `OPENVPN_PASSWORD` | Your VPN provider's OpenVPN credentials |
 | `RESTIC_REST_HOST` | REST server IP/hostname |
 | `RESTIC_REST_PORT` | REST server port (default: `8000`) |
 | `RESTIC_PASSWORD` | Repository encryption password |
@@ -344,13 +343,24 @@ vi immich/.env
 | `DB_PASSWORD` | PostgreSQL password (generate with `openssl rand -base64 32`) |
 | `IMMICH_VERSION` | Immich version tag (default: `release`) |
 
-### 9. Get NordVPN OpenVPN Credentials
+### 9. Configure the OpenVPN Profile
 
-1. Go to [NordVPN Dashboard](https://my.nordaccount.com/dashboard/)
-2. Navigate to **NordVPN** > **Manual setup** > **Service credentials**
-3. Copy the service credentials for OpenVPN
-4. Copy username and password to `.env` as `OPENVPN_USER` and `OPENVPN_PASSWORD`
-5. Set `SERVER_COUNTRIES` to your preferred location (e.g., `Czech Republic`)
+1. Generate a profile for **Linux / OpenVPN 2.4 or newer** with **UDP / AES-128-GCM**. Enable **Use IP** so the `remote` directive contains a numeric server IP address.
+2. On the server, save the downloaded `.ovpn` file as `arr/gluetun/custom.ovpn` inside the repository. Create `arr/gluetun` first if needed. This directory is ignored by Git.
+3. Set `OPENVPN_USER` and `OPENVPN_PASSWORD` in `.env` to your provider's OpenVPN credentials; these may differ from the website login.
+4. If the profile references separate certificate or key files, place them in `arr/gluetun` and use absolute container paths in the profile, such as `/gluetun/ca.crt`. Inline certificate and key blocks need no additional files.
+
+The profile selects the VPN server, port, protocol, and cipher. Gluetun mounts the profile read-only and requires it to exist before starting. See the [Gluetun custom OpenVPN setup](https://github.com/qdm12/gluetun-wiki/blob/main/setup/openvpn-configuration-file.md).
+
+When replacing an existing VPN configuration, recreate both Gluetun and qBittorrent because they share a network namespace:
+
+```bash
+docker compose config --quiet
+docker compose up -d --force-recreate gluetun qbittorrent
+docker compose logs --tail=100 gluetun
+```
+
+Confirm the VPN connects in the logs, then verify qBittorrent's public IP as described in the qBittorrent setup below. If the provider changes the server IP, generate a new profile and recreate both containers again.
 
 ### 10. Set Up Cloudflare for HTTPS (Let's Encrypt DNS Challenge)
 

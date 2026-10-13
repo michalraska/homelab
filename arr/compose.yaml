@@ -6,17 +6,22 @@ services:
     cap_add:
       - NET_ADMIN
     environment:
-      - VPN_SERVICE_PROVIDER=nordvpn
+      - VPN_SERVICE_PROVIDER=custom
       - VPN_TYPE=openvpn
-      - OPENVPN_PROTOCOL=udp
+      - OPENVPN_CUSTOM_CONFIG=/gluetun/custom.ovpn
       - OPENVPN_USER=${OPENVPN_USER}
       - OPENVPN_PASSWORD=${OPENVPN_PASSWORD}
-      - SERVER_COUNTRIES=${SERVER_COUNTRIES}
       - TZ=${TZ}
     ports:
       - "8080:8080"
     volumes:
       - ./gluetun:/gluetun
+      - type: bind
+        source: ./gluetun/custom.ovpn
+        target: /gluetun/custom.ovpn
+        read_only: true
+        bind:
+          create_host_path: false
     networks:
       - vpn-isolated
       - services  # Allow arr services to reach qBittorrent via gluetun
