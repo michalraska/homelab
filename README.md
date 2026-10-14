@@ -14,7 +14,6 @@ Docker Compose setup for media management, photo storage, DNS filtering, and ext
 | **Prowlarr** | Indexer manager | `http://prowlarr.local` (intranet) | services |
 | **Bazarr** | Subtitle manager | `http://bazarr.local` (intranet) | services |
 | **Homarr** | Dashboard | `http://homarr.local` (intranet) | services |
-| **Dashdot** | System monitor | `http://dashdot.local` (intranet) | services |
 | **AdGuard Home** | DNS filtering | `http://adguard.local` (intranet), DNS:53 | services |
 | **qBittorrent** | Download client | `http://localhost:8080` (VPN) | vpn-isolated (via Gluetun) |
 | **Gluetun** | VPN gateway | Internal only | vpn-isolated, services |
@@ -45,8 +44,7 @@ Traefik on port 80 (HTTP)
    ├─→ Radarr via radarr.local (7878)
    ├─→ Prowlarr via prowlarr.local (9696)
    ├─→ Bazarr via bazarr.local (6767)
-   ├─→ Homarr via homarr.local (7575)
-   └─→ Dashdot via dashdot.local (3001)
+   └─→ Homarr via homarr.local (7575)
 
 VPN Network (Isolated)
    ├─→ Gluetun (VPN Gateway) → Also on services network for arr access
@@ -73,7 +71,7 @@ docker/
 │   ├── prowlarr/           # Prowlarr config
 │   ├── bazarr/             # Bazarr config
 │   ├── jellyfin/           # Jellyfin config
-│   ├── homarr/             # Homarr config
+│   ├── homarr/             # Current Homarr appdata and preserved legacy data
 │   ├── qbittorrent/        # qBittorrent config
 │   └── gluetun/            # Gluetun VPN config
 ├── immich/
@@ -88,7 +86,6 @@ docker/
 │   ├── acme/               # Let's Encrypt certificates
 │   └── config/             # Traefik configuration
 ├── cloudflare-tunnel/      # Cloudflare Tunnel credentials
-├── dashdot/                # Dashdot configuration
 └── restic/                 # Restic backup configuration
 ```
 
@@ -328,6 +325,7 @@ vi immich/.env
 | `CLOUDFLARE_API_KEY` | Cloudflare API token for DNS challenge |
 | `CLOUDFLARE_TUNNEL_TOKEN` | Cloudflare Tunnel token |
 | `OPENVPN_USER` / `OPENVPN_PASSWORD` | Your VPN provider's OpenVPN credentials |
+| `HOMARR_SECRET_ENCRYPTION_KEY` | Stable 64-character hexadecimal key for Homarr integration secrets |
 | `RESTIC_REST_HOST` | REST server IP/hostname |
 | `RESTIC_REST_PORT` | REST server port (default: `8000`) |
 | `RESTIC_PASSWORD` | Repository encryption password |
@@ -492,7 +490,6 @@ Use AdGuard's **DNS rewrites** feature to resolve hostnames to your homelab IP:
    prowlarr.local → <homelab-ip>
    bazarr.local → <homelab-ip>
    homarr.local → <homelab-ip>
-   dashdot.local → <homelab-ip>
    ```
 3. Add entries for externally-exposed services (for local access):
    ```
@@ -540,11 +537,9 @@ Use AdGuard's **DNS rewrites** feature to resolve hostnames to your homelab IP:
    - Enable hardware decoding for supported codecs (H.264, HEVC, etc.)
    - The compose file already passes `/dev/dri` to the container
 
-### Dashdot (System Monitor)
-1. Access: `http://dashdot.local`
-2. View real-time system resources
-3. Monitor CPU, RAM, disk I/O, and network usage
-4. No configuration needed - auto-discovers system info
+### System Monitoring over SSH
+
+On the server, install `btop` with `sudo apt install btop`, then run `btop` in an SSH session. No monitoring container or HTTP endpoint is needed.
 
 ### qBittorrent (Behind VPN)
 1. Access via: `http://homelab.local:8080` (exposed through Gluetun)
@@ -593,10 +588,44 @@ Use AdGuard's **DNS rewrites** feature to resolve hostnames to your homelab IP:
 3. Sync to Sonarr and Radarr
 
 ### Homarr (Dashboard)
+Generate `HOMARR_SECRET_ENCRYPTION_KEY` once with `openssl rand -hex 32` and save it in the root `.env`. Keep a secure copy of the key for restores; do not regenerate it when updating Homarr.
+
 1. Access: `http://homarr.local`
 2. Complete initial setup
-3. Add service integrations for all your homelab services
+3. Add service integrations using URLs reachable from the container, such as `http://sonarr:8989`
 4. Configure widgets and customize layout
+
+Docker discovery and container management are unavailable because Homarr has no Docker socket access. Application integrations remain available through their APIs.
+
+#### Migration from `ajnart/homarr`
+
+The current image uses `arr/homarr/appdata` mounted at `/appdata`. It does not reuse the legacy `configs`, `icons`, or `data` directories. Current releases cannot import the legacy migration ZIP; recreate apps, integrations, and boards manually. See the [current migration guidance](https://homarr.dev/blog/2025/01/19/migration-guide-1.0/).
+
+Before deploying the changed Compose configuration, record the existing board and integration settings. Set the encryption key in `.env` before running any Compose commands. On the server, from `~/docker`, preserve the old installation:
+
+```bash
+docker compose stop homarr
+sudo tar -czf /root/homarr-before-migration.tar.gz -C arr homarr
+sudo chmod 600 /root/homarr-before-migration.tar.gz
+```
+
+Then deploy only the affected services:
+
+```bash
+docker compose config --quiet
+docker compose pull homarr
+docker compose up -d homarr restic-configs
+```
+
+Open `http://homarr.local`, create the administrator, and rebuild the board. The old directories and archive remain available as a reference or for rollback. Restic now also includes the new `/appdata` directory; see [Homarr backup consistency](BACKUP_RESTIC.md#homarr-backup-consistency).
+
+After deploying a revision that removes Dashdot, an existing container is an orphan and may keep running. Remove that specific container on the server:
+
+```bash
+docker rm -f dashdot
+```
+
+Remove its `dashdot.local` DNS rewrite and dashboard tile if they exist.
 
 ### Cloudflare Tunnel
 1. Access [Cloudflare Dashboard](https://dash.cloudflare.com/)

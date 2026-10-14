@@ -38,6 +38,21 @@ Homelab Server (Ubuntu)                    Synology NAS (DSM 7.1)
 - Small size (~few MB), quick to backup
 - **Includes only:** Config files (`.xml`, `.yaml`, `.conf`) and app-created Backups folders
 - Regenerable data (SSL certs, metadata, databases) excluded - apps restore from their Backups
+- Homarr is an exception: its complete `arr/homarr/appdata` store is included, along with the legacy configs during migration. Keep `HOMARR_SECRET_ENCRYPTION_KEY` separately in a secure store; the root `.env` is not part of this backup.
+
+#### Homarr Backup Consistency
+
+Scheduled Restic backups copy Homarr's live files and do not guarantee a consistent SQLite snapshot. For a consistent backup, stop Homarr during the configuration backup, then start it again even if the backup fails:
+
+```bash
+docker compose stop homarr
+docker exec restic-configs /usr/local/bin/backup
+docker compose start homarr
+```
+
+Alternatively, export a compatible backup from **Management → Tools → Backup** and keep the archive securely off the host. See [Homarr backup and restore](https://homarr.dev/docs/management/backup/) and [offline appdata backups](https://homarr.dev/docs/getting-started/installation/docker/).
+
+To restore the appdata copy, stop Homarr, restore the complete directory and its matching encryption key, then start Homarr. Use a compatible image version; preserve an offline copy before major upgrades.
 
 ### Repository 2: Immich Library
 

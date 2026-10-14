@@ -174,20 +174,17 @@ services:
 
   # ==================== Dashboard ====================
   homarr:
-    image: ghcr.io/ajnart/homarr:latest
+    image: ghcr.io/homarr-labs/homarr:latest
     container_name: homarr
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
     environment:
       - TZ=${TZ}
-      - HOSTNAME=0.0.0.0
-      - DISABLE_UPGRADE_MODAL=true
+      - SECRET_ENCRYPTION_KEY=${HOMARR_SECRET_ENCRYPTION_KEY:?Set HOMARR_SECRET_ENCRYPTION_KEY in .env (64 hex characters)}
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ./homarr/configs:/app/data/configs
-      - ./homarr/icons:/app/public/icons
-      - ./homarr/data:/data
+      # Keep legacy configs/icons/data intact; current Homarr uses a separate store.
+      - ./homarr/appdata:/appdata
     networks:
       - services
     labels:

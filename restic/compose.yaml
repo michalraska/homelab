@@ -39,7 +39,9 @@ services:
       - ../arr/bazarr/config:/data/arr/bazarr/config:ro
       - ../arr/bazarr/backup:/data/arr/bazarr/backup:ro
       - ../arr/qbittorrent/qBittorrent/qBittorrent.conf:/data/arr/qbittorrent/qBittorrent.conf:ro
+      # Preserve legacy configs during the manual Homarr migration.
       - ../arr/homarr/configs:/data/arr/homarr/configs:ro
+      - ../arr/homarr/appdata:/data/arr/homarr/appdata:ro
     security_opt:
       - no-new-privileges:true
 

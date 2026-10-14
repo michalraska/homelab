@@ -23,6 +23,5 @@ include:
   - adguard/compose.yaml
   - immich/compose.yaml
   - arr/compose.yaml
-  - dashdot/compose.yaml
   - restic/compose.yaml
   - diun/compose.yaml
