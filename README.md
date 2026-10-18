@@ -392,7 +392,7 @@ Before setting up the tunnel, create a scoped API token for Let's Encrypt:
 
 ```bash
 # Validate compose file
-docker compose config
+docker compose config --quiet
 
 # Start all services (detached)
 docker compose up -d
@@ -405,6 +405,83 @@ docker compose ps
 ```
 
 ## Post-Setup Configuration
+
+### Tailscale Access (Ubuntu 24.04 LTS)
+
+Install Tailscale directly on the homelab host. Traefik already publishes ports 80 and 443 on the host, so it can receive connections through the host's Tailscale IP.
+
+Before connecting the server, save a tailnet policy that defines `tag:homelab` with Owner/Admin tag owners:
+
+```json
+"tagOwners": {
+  "tag:homelab": ["autogroup:owner", "autogroup:admin"]
+}
+```
+
+Merge this definition into the existing `tagOwners` section. The intended access policy gives Owner/Admin full management access and other members only TCP 80/443 to `tag:homelab`, plus TCP/UDP 53 to the designated AdGuard resolver. Remove any existing allow-all grants or ACLs; a narrower grant does not override a broader permission. Family devices should use their owners' accounts with the Member role.
+
+#### Install and connect
+
+Run these commands on the homelab through its existing LAN SSH connection:
+
+```bash
+curl -fsSL https://tailscale.com/install.sh -o /tmp/install-tailscale.sh
+sudo sh /tmp/install-tailscale.sh
+```
+
+The standard Ubuntu installation handles daemon startup. If `tailscaled` is inactive or disabled after installation, run `sudo systemctl enable --now tailscaled` to start it and enable it at boot.
+
+Connect with the server tag and a recognizable tailnet hostname:
+
+```bash
+sudo tailscale up \
+  --hostname=homelab \
+  --advertise-tags=tag:homelab \
+  --accept-dns=false
+```
+
+Open the URL printed by the command on your own computer and authenticate as an Owner/Admin of the intended tailnet. This is a first-time setup command; for later setting changes, use `tailscale set` or include the existing options required by `tailscale up`.
+
+`--accept-dns=false` preserves the host's existing DNS configuration because this server also runs AdGuard Home. This setup uses the existing OpenSSH service and keys; it does not enable Tailscale SSH, advertise LAN subnet routes, or advertise an exit node.
+
+#### Verify access from another device
+
+On the homelab, check its assigned address and service state:
+
+```bash
+tailscale ip -4
+tailscale status
+systemctl is-active tailscaled
+systemctl is-enabled tailscaled
+```
+
+In [Machines](https://console.tailscale.com/admin/machines), confirm the server is online with `tag:homelab` and approve it if device approval is enabled. If the tag is missing, use the three-dot menu on its row, select **Edit tags**, and assign `tag:homelab`.
+
+On a separate computer connected to Tailscale under your Owner/Admin account, replace the example IP below with the address returned by `tailscale ip -4`:
+
+```bash
+HOMELAB_TAILSCALE_IP=100.x.y.z
+nc -vz "$HOMELAB_TAILSCALE_IP" 80
+nc -vz "$HOMELAB_TAILSCALE_IP" 443
+curl -I -H 'Host: homarr.local' "http://${HOMELAB_TAILSCALE_IP}/"
+```
+
+For HTTPS, replace the example hostname with a real service hostname covered by its certificate:
+
+```bash
+HOMELAB_HTTPS_HOST=jellyfin.example.com
+curl -I \
+  --resolve "${HOMELAB_HTTPS_HOST}:443:${HOMELAB_TAILSCALE_IP}" \
+  "https://${HOMELAB_HTTPS_HOST}/"
+```
+
+These HTTP tests supply the hostname Traefik needs to select a router. Opening the bare IP may return 404 even when the connection works. The HTTPS test also sends the correct TLS server name and verifies the certificate.
+
+After these checks pass, configure AdGuard DNS answers for tailnet clients to point service hostnames to the homelab's Tailscale IP, while retaining LAN answers for LAN clients. Until then, an ordinary lookup of a public service hostname may still send traffic through Cloudflare rather than Tailscale. Verify DNS and web access from a separate tailnet device before changing client DNS configuration.
+
+Before inviting family, protect administrative Traefik routes separately: allowing ports 80/443 also exposes every administrative application routed through those ports. Confirm access from an actual Member account: web services and AdGuard DNS should work, while SSH, other devices' web interfaces, and exit-node use should be denied. Tests from your Owner/Admin account do not prove these restrictions.
+
+References: [Linux installation](https://tailscale.com/docs/install/linux), [`tailscale up` options](https://tailscale.com/docs/reference/tailscale-cli/up), [grants syntax](https://tailscale.com/docs/reference/syntax/grants).
 
 ### Container Image Update Notifications (Diun)
 
