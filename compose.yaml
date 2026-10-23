@@ -1,8 +1,4 @@
 networks:
-  ingress:
-    name: ingress
-    driver: bridge
-
   services:
     name: services
     driver: bridge
@@ -18,7 +14,6 @@ networks:
 services: {}
 
 include:
-  - cloudflare-tunnel/compose.yaml
   - traefik/compose.yaml
   - adguard/compose.yaml
   - immich/compose.yaml

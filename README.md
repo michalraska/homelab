@@ -1,14 +1,14 @@
 # Homelab Setup with Docker Compose
 
-Docker Compose setup for media management, photo storage, DNS filtering, and external access via Cloudflare Tunnel. Includes Traefik reverse proxy with network segmentation.
+Docker Compose setup for media management, photo storage, DNS filtering, and private remote access via Tailscale. Includes Traefik reverse proxy with network segmentation. Services are accessed over the LAN or Tailscale; no public tunnel is included.
 
 ## Services Included
 
 | Service | Purpose | Access | Network |
 |---------|---------|--------|---------|
-| **Traefik** | Reverse proxy | `http://traefik.local` (intranet) | ingress, services |
-| **Jellyfin** | Media server | `https://jellyfin.yourdomain` (external + intranet) | services |
-| **Immich** | Photo storage | `https://immich.yourdomain` (external + intranet) | services, immich |
+| **Traefik** | Reverse proxy | `http://traefik.local` (intranet) | services |
+| **Jellyfin** | Media server | `https://jellyfin.yourdomain` (LAN + Tailscale) | services |
+| **Immich** | Photo storage | `https://immich.yourdomain` (LAN + Tailscale) | services, immich |
 | **Sonarr** | TV automation | `http://sonarr.local` (intranet) | services |
 | **Radarr** | Movie automation | `http://radarr.local` (intranet) | services |
 | **Prowlarr** | Indexer manager | `http://prowlarr.local` (intranet) | services |
@@ -17,25 +17,24 @@ Docker Compose setup for media management, photo storage, DNS filtering, and ext
 | **AdGuard Home** | DNS filtering | `http://adguard.local` (intranet), DNS:53 | services |
 | **qBittorrent** | Download client | `http://localhost:8080` (VPN) | vpn-isolated (via Gluetun) |
 | **Gluetun** | VPN gateway | Internal only | vpn-isolated, services |
-| **Cloudflare Tunnel** | External routing | Routes to Traefik | ingress |
 | **Restic** | Automated backups | Scheduled (2-3 AM) | - |
 
 ## Architecture
 
 ```
-External (Internet)
+Remote device with Tailscale enabled
+   ↓ (encrypted tailnet connection; access governed by Tailscale policy)
+Homelab host's Tailscale IP, port 443
    ↓
-Cloudflare Tunnel (HTTPS encryption)
-   ↓
-Traefik on port 80 (HTTP from tunnel)
-   ├─→ Immich (2283) with HTTPS/TLS
-   └─→ Jellyfin (8096) with HTTPS/TLS
+Traefik (HTTPS/TLS with Let's Encrypt)
+   ├─→ Immich (HTTP backend, 2283)
+   └─→ Jellyfin (HTTP backend, 8096)
 
 Intranet (Local Network)
    ↓
 AdGuard Home (DNS filtering on 53/TCP+UDP + DNS rewrites for *.yourdomain and *.local)
    ↓
-Traefik on port 80 (HTTP)
+Traefik on ports 80 (HTTP) / 443 (HTTPS for Jellyfin and Immich)
    ├─→ Dashboard via traefik.local (API routing only)
    ├─→ AdGuard Home Web UI via adguard.local (3000)
    ├─→ Jellyfin via jellyfin.yourdomain (8096)
@@ -85,7 +84,6 @@ docker/
 ├── traefik/
 │   ├── acme/               # Let's Encrypt certificates
 │   └── config/             # Traefik configuration
-├── cloudflare-tunnel/      # Cloudflare Tunnel credentials
 └── restic/                 # Restic backup configuration
 ```
 
@@ -98,9 +96,10 @@ docker/
 3. **Storage**: Sufficient disk space. LVM recommended (Ubuntu Server default) - may need extension to use full disk, see setup instructions.
 4. **Filesystem**: ext4 or similar supporting hardlinks for optimal *arr stack performance
 5. **Hardware**: Intel CPU with QuickSync support (optional, for Jellyfin hardware transcoding and Immich machine learning acceleration)
-6. **Cloudflare Account** with a domain
+6. **Cloudflare Account** with a domain for DNS and automated HTTPS certificates
 7. **VPN Account** with an OpenVPN profile and OpenVPN credentials
 8. **User/Group IDs**: Know your PUID and PGID (typically 1000:1000)
+9. **Tailscale** on the homelab host and remote client devices, with an authorized tailnet account
 
 ## Setup Instructions
 
@@ -323,7 +322,6 @@ vi immich/.env
 | `PUID` / `PGID` | User/group IDs for file ownership |
 | `ACME_EMAIL` | Email for Let's Encrypt notifications |
 | `CLOUDFLARE_API_KEY` | Cloudflare API token for DNS challenge |
-| `CLOUDFLARE_TUNNEL_TOKEN` | Cloudflare Tunnel token |
 | `OPENVPN_USER` / `OPENVPN_PASSWORD` | Your VPN provider's OpenVPN credentials |
 | `HOMARR_SECRET_ENCRYPTION_KEY` | Stable 64-character hexadecimal key for Homarr integration secrets |
 | `RESTIC_REST_HOST` | REST server IP/hostname |
@@ -362,7 +360,7 @@ Confirm the VPN connects in the logs, then verify qBittorrent's public IP as des
 
 ### 10. Set Up Cloudflare for HTTPS (Let's Encrypt DNS Challenge)
 
-Before setting up the tunnel, create a scoped API token for Let's Encrypt:
+Create a scoped API token for Let's Encrypt DNS-01 validation. Cloudflare hosts DNS only; certificate issuance and renewal do not require a public tunnel or inbound WAN ports:
 
 1. Go to [Cloudflare API Tokens](https://dash.cloudflare.com/profile/api-tokens)
 2. Click **"Create Token"**
@@ -375,20 +373,7 @@ Before setting up the tunnel, create a scoped API token for Let's Encrypt:
 5. Copy the token to `.env` as `CLOUDFLARE_API_KEY`
 6. Also set `ACME_EMAIL` in `.env` to your email for Let's Encrypt notifications
 
-### 11. Set Up Cloudflare Tunnel
-
-1. Go to [Cloudflare Zero Trust Dashboard](https://one.dash.cloudflare.com/)
-2. Navigate to **Networks** → **Connectors**
-3. Click **Create a tunnel**
-4. Select **Cloudflared** as the connector type
-5. Name your tunnel (e.g., `homelab`)
-6. Copy the tunnel token and save it to `.env` as `CLOUDFLARE_TUNNEL_TOKEN`
-7. Skip the connector installation step (Docker will handle this)
-8. Configure public hostnames for your services:
-   - `jellyfin.yourdomain.com` → `http://traefik:80`
-   - `immich.yourdomain.com` → `http://traefik:80`
-
-### 12. Start Services
+### 11. Start Services
 
 ```bash
 # Validate compose file
@@ -418,7 +403,7 @@ Before connecting the server, save a tailnet policy that defines `tag:homelab` w
 }
 ```
 
-Merge this definition into the existing `tagOwners` section. The intended access policy gives Owner/Admin full management access and other members only TCP 80/443 to `tag:homelab`, plus TCP/UDP 53 to the designated AdGuard resolver. Remove any existing allow-all grants or ACLs; a narrower grant does not override a broader permission. Family devices should use their owners' accounts with the Member role.
+Merge this definition into the existing `tagOwners` section. The intended access policy gives Owner/Admin full management access and other members only TCP 443 to `tag:homelab` for Immich/Jellyfin, plus TCP/UDP 53 to the designated AdGuard resolver if they use private DNS. Remove any existing allow-all grants or ACLs; a narrower grant does not override a broader permission. Family devices should use their owners' accounts with the Member role.
 
 #### Install and connect
 
@@ -477,11 +462,31 @@ curl -I \
 
 These HTTP tests supply the hostname Traefik needs to select a router. Opening the bare IP may return 404 even when the connection works. The HTTPS test also sends the correct TLS server name and verifies the certificate.
 
-After these checks pass, configure AdGuard DNS answers for tailnet clients to point service hostnames to the homelab's Tailscale IP, while retaining LAN answers for LAN clients. Until then, an ordinary lookup of a public service hostname may still send traffic through Cloudflare rather than Tailscale. Verify DNS and web access from a separate tailnet device before changing client DNS configuration.
+After these checks pass, configure AdGuard DNS answers for tailnet clients to point service hostnames to the homelab's Tailscale IP, while retaining LAN answers for LAN clients. The existing hostname alone does not select Tailscale: its DNS answer must point to an address reachable over the intended private path. Remove old tunnel DNS records when migrating as described below. Verify DNS and web access from a separate tailnet device before changing client DNS configuration.
 
-Before inviting family, protect administrative Traefik routes separately: allowing ports 80/443 also exposes every administrative application routed through those ports. Confirm access from an actual Member account: web services and AdGuard DNS should work, while SSH, other devices' web interfaces, and exit-node use should be denied. Tests from your Owner/Admin account do not prove these restrictions.
+Before inviting family, keep administrative routes off the family entry point: TCP 443 currently routes only to Immich and Jellyfin; TCP 80 also routes to administration tools. Confirm access from an actual Member account: Immich/Jellyfin and any explicitly allowed DNS should work, while HTTP administration, SSH, other devices' web interfaces, and exit-node use should be denied. Tests from your Owner/Admin account do not prove these restrictions. For node sharing instead of membership, see the migration section below.
 
 References: [Linux installation](https://tailscale.com/docs/install/linux), [`tailscale up` options](https://tailscale.com/docs/reference/tailscale-cli/up), [grants syntax](https://tailscale.com/docs/reference/syntax/grants).
+
+### Migrating an Existing Cloudflare Tunnel Deployment
+
+Removing the service from Compose does not stop an already running container. Run this migration on the homelab server after updating its checkout:
+
+1. Verify private access from a separate Tailscale client using the HTTPS test above. Configure DNS for both service hostnames and test the ordinary URLs over mobile data before disabling the tunnel. Family access can be configured later; users without private access will lose remote access when the tunnel stops.
+2. Validate the configuration, remove only the old tunnel container, and update Traefik to detach it from the retired `ingress` network:
+
+   ```bash
+   docker compose config --quiet
+   docker rm -f cloudflare-tunnel
+   docker compose up -d --no-deps traefik
+   ```
+
+   The explicit container removal prevents the retired service from continuing as a Compose orphan. Do not run a full stack shutdown or delete application volumes for this migration.
+3. In the Cloudflare dashboard, remove the old tunnel's published application routes and delete the retired tunnel. Remove its associated DNS records, usually CNAMEs pointing to `<tunnel-id>.cfargotunnel.com`. Remove `CLOUDFLARE_TUNNEL_TOKEN` from the server's `.env`; keep `CLOUDFLARE_API_KEY`, the DNS zone and the domain for certificate renewals.
+4. Keep the existing `immich.yourdomain` and `jellyfin.yourdomain` URLs by resolving them to the LAN IP at home and the Tailscale IP remotely. For node-sharing recipients, DNS must also work in their own tailnets; your tailnet's DNS configuration is not automatically inherited. One option is public, **DNS-only** A records pointing to the shared server's Tailscale IP, with LAN overrides in AdGuard. This does not expose the applications through Cloudflare's proxy. Check the address visible to each recipient and any DNS rebinding protection before relying on it.
+5. Confirm both HTTPS URLs work over Tailscale and fail from an external device with Tailscale disabled. Also check router port forwarding, UPnP and IPv6 rules: stopping the tunnel alone does not close other WAN access paths. Outbound internet remains needed for Tailscale connectivity, DNS, certificates, updates and download services.
+
+Family onboarding is a separate step. If sharing only Immich and Jellyfin, restrict recipients to TCP 443, remove broader grants that would also apply, and test from a recipient's account. Keep administrative routes off this entry point: adding another HTTPS application to port 443 would make it reachable under the same network permission. Application accounts still control access inside Immich and Jellyfin. See [node sharing](https://tailscale.com/docs/features/sharing) and [Tailscale DNS](https://tailscale.com/docs/reference/dns-in-tailscale).
 
 ### Container Image Update Notifications (Diun)
 
@@ -568,7 +573,7 @@ Use AdGuard's **DNS rewrites** feature to resolve hostnames to your homelab IP:
    bazarr.local → <homelab-ip>
    homarr.local → <homelab-ip>
    ```
-3. Add entries for externally-exposed services (for local access):
+3. Add LAN entries for the HTTPS services:
    ```
    jellyfin.yourdomain → <homelab-ip>
    immich.yourdomain → <homelab-ip>
@@ -578,12 +583,12 @@ Use AdGuard's **DNS rewrites** feature to resolve hostnames to your homelab IP:
 - Without DNS rewrites, `.local` hostnames won't resolve on your network
 - Traefik uses Host header matching (`Host: adguard.local`) for routing
 - AdGuard provides the DNS resolution that makes `.local` hostnames work
-- All traffic still goes through Traefik on port 80
+- HTTP services use Traefik on port 80; HTTPS access to Jellyfin and Immich uses port 443
 - AdGuard's web UI is now accessible via Traefik instead of direct port mapping
 
 **Network Architecture:**
-- AdGuard runs on `services` network (internal only)
-- Traefik bridges traffic from `ingress` network to `services` network
+- AdGuard and Traefik run on the `services` network
+- Traefik forwards LAN and authorized tailnet connections to service containers
 - DNS ports (53) remain exposed on host for network-wide DNS filtering
 - Web UI accessible via Traefik (`adguard.local`) or directly (`homelab.local:3000`)
 
@@ -594,16 +599,16 @@ Use AdGuard's **DNS rewrites** feature to resolve hostnames to your homelab IP:
 3. Check router/service status
 
 ### Immich
-1. Access: `https://immich.yourdomain` (same URL works internally and externally)
+1. Access: `https://immich.yourdomain` (same URL over LAN and Tailscale, once DNS is configured)
    - **Internal path**: AdGuard DNS rewrite → Traefik → Immich (TLS via Let's Encrypt)
-   - **External path**: Cloudflare Tunnel → Traefik → Immich (TLS via Let's Encrypt)
+   - **Remote path**: Tailscale → host port 443 → Traefik → Immich (TLS via Let's Encrypt)
 2. Create initial admin account
 3. Configure backup directory
 
 ### Jellyfin
-1. Access: `https://jellyfin.yourdomain` (same URL works internally and externally)
+1. Access: `https://jellyfin.yourdomain` (same URL over LAN and Tailscale, once DNS is configured)
    - **Internal path**: AdGuard DNS rewrite → Traefik → Jellyfin (TLS via Let's Encrypt)
-   - **External path**: Cloudflare Tunnel → Traefik → Jellyfin (TLS via Let's Encrypt)
+   - **Remote path**: Tailscale → host port 443 → Traefik → Jellyfin (TLS via Let's Encrypt)
 2. Complete initial setup
 3. Add libraries:
    - TV Shows: `/data/media/tv`
@@ -704,12 +709,6 @@ docker rm -f dashdot
 
 Remove its `dashdot.local` DNS rewrite and dashboard tile if they exist.
 
-### Cloudflare Tunnel
-1. Access [Cloudflare Dashboard](https://dash.cloudflare.com/)
-2. Navigate to Access → Tunnels
-3. Verify tunnel is connected and showing status
-4. Cloudflare automatically routes to Traefik (no manual route config needed)
-
 ## Security Considerations
 
 ### Firewall
@@ -717,29 +716,27 @@ Remove its `dashdot.local` DNS rewrite and dashboard tile if they exist.
 UFW firewall configuration is documented in **[FIREWALL.md](FIREWALL.md)**. The firewall provides defense in depth and SSH rate limiting for brute-force protection.
 
 ### Network Isolation
-- **ingress**: Traefik and Cloudflare Tunnel only (entry point for all external traffic)
-- **services**: Internal services (AdGuard, Sonarr, Radarr, Jellyfin, Immich, etc.) and Traefik - isolated from direct external access at the Docker network level
+- **services**: Application services and Traefik. Published host ports remain reachable according to host/router networking rules.
 - **immich**: Immich database (PostgreSQL) and cache (Redis) isolated from other services
 - **vpn-isolated**: qBittorrent isolated, all traffic enforced through VPN (Gluetun bridges to services network for arr stack access)
 
 ### Reverse Proxy
-- Traefik is single entry point for both external and internal traffic
-- Jellyfin and Immich exposed to Cloudflare Tunnel (via Traefik)
-  - Immich: HTTPS/TLS with Let's Encrypt
-  - Jellyfin: HTTPS/TLS with Let's Encrypt
-- Arr services (Sonarr, Radarr, etc.) only accessible from services network via Traefik
-- No direct port exposure of internal services to host (except AdGuard DNS on port 53)
+- Traefik routes LAN and authorized Tailscale traffic to applications.
+- Jellyfin and Immich have HTTPS routers on port 443 with Let's Encrypt certificates.
+- Administrative routes use HTTP port 80. Hostname matching is routing, not authorization.
+- AdGuard also publishes DNS port 53 and Web UI port 3000; Gluetun publishes qBittorrent's Web UI on port 8080.
+- Removing the tunnel does not bind published ports to Tailscale. Check router port forwarding, UPnP and IPv6 exposure; Docker-published ports can bypass UFW rules. See [FIREWALL.md](FIREWALL.md).
 
 ### Container Hardening
 - All services use `security_opt: no-new-privileges:true`
-- Traefik and Cloudflared have all capabilities dropped
+- Traefik drops all capabilities, then adds NET_BIND_SERVICE for its listening ports
 - Immich services drop NET_RAW capability
 - Gluetun only keeps NET_ADMIN (required for VPN)
 
 ### Secrets Management
 - Use `.env` file for sensitive data (never commit to git)
 - Generate strong passwords: `openssl rand -base64 32`
-- Cloudflare tunnel token stored in `.env`
+- Keep the scoped Cloudflare DNS API token in `.env` for certificate renewals
 - Database passwords should be 32+ characters
 
 ## Hardlinks & Storage Optimization

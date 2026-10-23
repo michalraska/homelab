@@ -2,7 +2,7 @@
 
 UFW (Uncomplicated Firewall) provides defense in depth for your homelab server. Since the server is behind a NAT router, external access is already blocked by default. UFW adds an extra security layer and documents which ports are expected to be open.
 
-**Note:** External access to Jellyfin and Immich works via Cloudflare Tunnel, which bypasses the firewall entirely.
+**Remote access:** Use Tailscale for Jellyfin and Immich. Cloudflare Tunnel is no longer part of this setup. Keep application ports closed on the WAN, including IPv6, and check for router port forwarding or UPnP mappings.
 
 ## Exposed Ports
 
@@ -61,14 +61,9 @@ sudo ufw status verbose
 
 ## Docker and UFW
 
-Docker manipulates iptables directly and bypasses UFW for container networking. This is expected behavior and doesn't compromise security for this setup:
+Docker-published ports can bypass UFW rules. Traefik publishes ports 80/443, AdGuard publishes 53/3000, and Gluetun publishes qBittorrent's Web UI on 8080. Hostname matching in Traefik selects a service; it does not authorize the caller.
 
-- Internal Docker networks are isolated from the host
-- Services only expose ports through Traefik reverse proxy
-- Traefik handles access control via Host header matching
-- Container-to-container traffic stays within Docker networks
-
-No additional configuration is needed. The UFW rules protect the host-exposed ports, while Docker manages container networking separately.
+Removing Cloudflare Tunnel closes that public access path, but does not restrict these published ports to Tailscale. Verify router/WAN rules, IPv6 exposure, and access from another device. Tailscale grants control tailnet traffic; LAN/WAN access needs its own restrictions. See [Docker and UFW](https://docs.docker.com/engine/network/packet-filtering-firewalls/#docker-and-ufw).
 
 ## Testing the Firewall
 

@@ -9,7 +9,6 @@ When implementing changes to this homelab setup, use Context7 to fetch up-to-dat
 | Docker Compose | `/docker/compose` |
 | Docker | `/docker/docs` |
 | Traefik | `/traefik/traefik` |
-| Cloudflare Tunnel | `/cloudflare/cloudflared` |
 | Jellyfin | `/jellyfin/jellyfin` |
 | Immich | `/immich-app/immich` |
 | Sonarr | `/sonarr/sonarr` |

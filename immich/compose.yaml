@@ -30,7 +30,7 @@ services:
       disable: false
     labels:
       - "traefik.enable=true"
-      # HTTP router - for Cloudflare Tunnel and internal LAN access
+      # HTTP router - for LAN and authorized tailnet access
       - "traefik.http.routers.immich.rule=Host(`immich.${DOMAIN}`)"
       - "traefik.http.routers.immich.entrypoints=web"
       - "traefik.http.routers.immich.service=immich"
